@@ -358,15 +358,13 @@ public class TopicController extends BaseController {
     /**
      * 加精和取消加精
      */
-    @Route(value = "/essence", method = HttpMethod.POST)
+    @Route(value = "/topic/essence", method = HttpMethod.POST)
     @JSON
-    public RestResponse essence(Request request) {
-
+    public RestResponse doEssence(Request request) {
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
             return RestResponse.fail(401);
         }
-
         if (user.getRole_id() > 3) {
             return RestResponse.fail("您无权限操作");
         }
@@ -385,7 +383,6 @@ public class TopicController extends BaseController {
             Integer count = topic.getIs_essence() == 1 ? 0 : 1;
             topicService.essence(tid, count);
             userlogService.save(user.getUid(), Actions.ESSENCE, tid + ":" + count);
-
             return RestResponse.ok(tid);
         } catch (Exception e) {
             String msg = "设置失败";
@@ -401,7 +398,7 @@ public class TopicController extends BaseController {
     /**
      * 帖子下沉
      */
-    @Route(value = "/sink", method = HttpMethod.POST)
+    @Route(value = "/topic/sink", method = HttpMethod.POST)
     @JSON
     public RestResponse sink(Request request) {
         LoginUser user = SessionKit.getLoginUser();
@@ -437,19 +434,18 @@ public class TopicController extends BaseController {
     /**
      * 删除帖子
      */
-    @Route(value = "/delete", method = HttpMethod.POST)
+    @Route(value = "/topic/delete", method = HttpMethod.POST)
     @JSON
-    public RestResponse delete(Request request, Response response) {
+    public RestResponse delete(Request request) {
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
             return RestResponse.fail(401);
         }
 
-        Integer tid = request.queryInt("tid");
-        if (null == tid || tid == 0 || user.getRole_id() > 2) {
-            return RestResponse.fail();
+        Integer tid = request.queryInt("tid", 0);
+        if (tid == 0 || user.getRole_id() > 2) {
+            return RestResponse.fail("您没有权限删除该贴");
         }
-
         try {
             topicService.delete(tid);
             return RestResponse.ok(tid);
@@ -468,14 +464,13 @@ public class TopicController extends BaseController {
      * 精华帖页面
      */
     @Route(value = "/essence", method = HttpMethod.GET)
-    public ModelAndView essencePage(Request request, Response response) {
+    public ModelAndView essence(Request request, Response response) {
         // 帖子
         Take tp = new Take(Topic.class);
         Integer page = request.queryInt("p", 1);
         Paginator<HomeTopic> topicPage = topicService.getEssenceTopics(page, 15);
         tp.eq("status", 1).eq("is_essence", 1).desc("create_time", "update_time").page(page, 15);
         request.attribute("topicPage", topicPage);
-
         return this.getView("essence");
     }
 

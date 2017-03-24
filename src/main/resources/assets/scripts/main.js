@@ -11,23 +11,13 @@ function go_signin(){
 	},function(isConfirm){
 		if (isConfirm) {
 			setTimeout(function(){
-				window.location.href= BASE + '/signin';
+				window.location.href= '/signin';
 			}, 300);
 		} else{
-			window.location.href= BASE + '/signin';
+			window.location.href= '/signin';
 		}
 	});
 }
-
-function len(o){  
-   var n, count = 0;  
-   for(n in o){  
-      if(o.hasOwnProperty(n)){  
-         count++;  
-      }  
-   }  
-   return count;
-}  
 
 /* 
 弹出窗口居中 
@@ -141,7 +131,7 @@ $('.topic-footer .heart').on('click', function(){
 $('.topic-detail-heading .sinks').on('click', function(){
 	var tid = $(this).attr("tid");
     jc.post({
-        url : BASE+'/sink',
+        url : '/topic/sink',
         data: {tid : tid},
         success: function (result) {
             if(result && result.success){
@@ -161,7 +151,7 @@ $('.topic-detail-heading .sinks').on('click', function(){
 $('.topic-footer .follow').on('click', function(){
 	var tid = $(this).attr("tid");
     jc.post({
-        url : BASE+'/favorite',
+        url : '/favorite',
         data: {type:'topic', event_id : tid},
         success: function (result) {
             if(result && result.success){
@@ -181,7 +171,7 @@ $('.topic-footer .follow').on('click', function(){
 $('.topic-footer .essence').on('click', function(){
 	var tid = $(this).attr("tid");
     jc.post({
-        url : BASE+'/essence',
+        url : '/topic/essence',
         data: {tid : tid},
         success: function (result) {
             if(result && result.success){
@@ -201,19 +191,20 @@ $('.topic-footer .essence').on('click', function(){
 //管理员删帖
 $('.topic-footer .deltopic').on('click', function(){
 	var tid = $(this).attr("tid");
-    jc.post({
-        url : BASE+'/delete',
-        data: {tid : tid},
-        success: function (result) {
-            if(result && result.success){
-                window.location.href = "/";
-            } else {
-                if(result.code == 401){
-                    go_signin();
-                } else {
-                    jc.alertError(result.msg || '设置精华失败');
+    jc.alertConfirm({
+        title:'确定删除该帖子吗?',
+        then: function () {
+            tale.post({
+                url : '/topic/delete',
+                data: {tid : tid},
+                success: function (result) {
+                    if(result && result.success){
+                        jc.alertOk('帖子删除成功');
+                    } else {
+                        jc.alertError(result.msg || '帖子删除失败');
+                    }
                 }
-            }
+            });
         }
     });
     return false;
@@ -245,7 +236,7 @@ $('.comment-list .at-user').on('click', function(){
 $('.profile .following').on('click', function(){
 	var uid = $(this).attr("uid");
     jc.post({
-        url : BASE+'/favorite',
+        url : '/favorite',
         data: {type:'following', event_id : uid},
         success: function (result) {
             if(result && result.success){
@@ -266,7 +257,7 @@ $('.profile .following').on('click', function(){
 $('.node-head .favorite').on('click', function(){
 	var nid = $(this).attr("nid");
     jc.post({
-        url : BASE+'/favorite',
+        url : '/favorite',
         data: {type:'node', event_id : nid},
         success: function (result) {
             if(result && result.success){
@@ -284,41 +275,12 @@ $('.node-head .favorite').on('click', function(){
 });
 ////////////////////帖子操作:START//////////////////////
 
-// 评论帖子
-$("#comment-form .ladda-button").on('click', function(e){
-	e.preventDefault();
-	var form = $('#comment-form')[0];
-	if(form.checkValidity()) {
-		var formData = $('#comment-form').serialize();
-        jc.post({
-            url : BASE+'/comment/add',
-            data: formData,
-            success: function (result) {
-                $('#comment-form')[0].reset();
-                $('#comment-form button').removeAttr('disabled');
-                if(result && result.success){
-                    window.location.reload();
-                } else {
-                    if(result.code == 401){
-                        go_signin();
-                    } else {
-                        jc.alertError(result.msg || '回复失败');
-                    }
-                }
-            }
-        });
-	}
-	return true;
-});
-
-
-
 var topic = {};
 //编辑帖子
 topic.edit = function(){
 	var formData = $('#topic-edit').serialize();
     jc.post({
-        url : BASE+'/topic/edit',
+        url : '/topic/edit',
         data: formData,
         success: function (result) {
             if(result && result.success){
@@ -335,50 +297,7 @@ topic.edit = function(){
 	return false;
 };
 
-//评论帖子
-/*topic.comment = function(){
-	var formData = $('#comment-form').serialize();
-	$.post(BASE + '/comment/add', formData, function(response){
-		if(response){
-			 if(response.status == 200){
-				 window.location.reload();
-			 } else if(response.status == 401){
-				 go_signin();	
-			 } else {
-				 alertError(response.msg);
-			 }
-		}
-	});
-	return false;
-};*/
 ////////////////////帖子操作:END//////////////////////
-
-////////////////////个人设置:START//////////////////////
-var user = {};
-// 修改头像
-user.update_avatar = function(){
-	var avatar = $("#avatar_form #user_avatar").val();
-	if(avatar && avatar != ''){
-		jc.post({
-			url : BASE+'/settings',
-			data: {type:'avatar', avatar : avatar},
-			success: function (result) {
-				if(result && result.success){
-                    jc.alertOkAndReload('头像更换成功');
-				} else {
-					if(result.code == 401){
-                        go_signin();
-					} else {
-						jc.alertError(result.msg || '头像修改失败');
-					}
-				}
-            }
-		});
-	}
-	return false;
-};
-
-////////////////////个人设置:END//////////////////////
 
 ////////////////////Github绑定:START////////////////////
 var github = {};
@@ -405,7 +324,6 @@ github.signup = function(){
     });
 	return false;
 };
-
 
 github.signin = function(){
     jc.post({

@@ -117,7 +117,7 @@ var comment_members = ['${topic.user_name}'];
                 </div>
                 <div class="panel-body">
                 	#if(null != login_user)
-               		<form id="comment-form" onsubmit="return topic.comment();" class="form-horizontal" role="form" method="post">
+               		<form id="comment-form" onsubmit="return doComment();" class="form-horizontal" role="form" method="post">
                			<input type="hidden" name="tid" value="${topic.tid}">
                         <input type="hidden" name="tuid" value="${topic.uid}">
                         <div class="mb10">
@@ -142,5 +142,28 @@ var comment_members = ['${topic.user_name}'];
 </div>
 <script>hljs.initHighlightingOnLoad();</script>
 #include("./common/footer.html")
+<script type="text/javascript">
+    function doComment() {
+        jc.post({
+            url : '/comment/add',
+            data: $('#comment-form').serialize(),
+            success: function (result) {
+                $('#comment-form')[0].reset();
+                $('#comment-form button').removeAttr('disabled');
+                if(result && result.success){
+                    window.location.reload();
+                } else {
+                    if(result.code == 401){
+                        go_signin();
+                    } else {
+                        jc.alertError(result.msg || '回复失败');
+                    }
+                }
+            }
+        });
+        return false;
+    }
+
+</script>
 </body>
 </html>
