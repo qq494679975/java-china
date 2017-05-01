@@ -5,7 +5,7 @@ import com.blade.ioc.annotation.Service;
 import com.blade.jdbc.ActiveRecord;
 import com.blade.kit.CollectionKit;
 import com.blade.kit.StringKit;
-import com.javachina.Types;
+import com.javachina.constants.Types;
 import com.javachina.model.Comment;
 import com.javachina.model.Settings;
 import com.javachina.model.Topic;

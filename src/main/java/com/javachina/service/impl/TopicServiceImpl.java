@@ -9,7 +9,7 @@ import com.blade.jdbc.model.Paginator;
 import com.blade.kit.CollectionKit;
 import com.blade.kit.DateKit;
 import com.blade.kit.StringKit;
-import com.javachina.Types;
+import com.javachina.constants.Types;
 import com.javachina.dto.HomeTopic;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;

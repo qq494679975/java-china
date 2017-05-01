@@ -2,7 +2,7 @@ package com.javachina.ext;
 
 import com.blade.kit.DateKit;
 import com.blade.kit.StringKit;
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 
 public class Funcs {
 

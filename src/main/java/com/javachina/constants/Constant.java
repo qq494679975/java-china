@@ -1,4 +1,4 @@
-package com.javachina;
+package com.javachina.constants;
 
 import com.blade.kit.base.Config;
 import jetbrick.template.JetGlobalContext;

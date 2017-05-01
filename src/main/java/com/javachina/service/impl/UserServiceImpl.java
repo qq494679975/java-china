@@ -9,7 +9,7 @@ import com.blade.kit.BeanKit;
 import com.blade.kit.DateKit;
 import com.blade.kit.EncrypKit;
 import com.blade.kit.StringKit;
-import com.javachina.Types;
+import com.javachina.constants.Types;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
 import com.javachina.kit.MailKit;

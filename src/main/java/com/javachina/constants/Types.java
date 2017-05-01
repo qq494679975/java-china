@@ -1,4 +1,4 @@
-package com.javachina;
+package com.javachina.constants;
 
 public enum Types {
     topic,

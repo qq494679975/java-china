@@ -1,6 +1,6 @@
 package com.javachina.kit;
 
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 import org.apache.commons.mail.HtmlEmail;
 
 import java.util.concurrent.ExecutorService;

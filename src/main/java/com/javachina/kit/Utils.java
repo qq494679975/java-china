@@ -4,7 +4,7 @@ import com.blade.kit.StringKit;
 import com.blade.kit.http.HttpRequest;
 import com.blade.kit.json.JSONKit;
 import com.blade.mvc.http.Request;
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 import com.javachina.ext.Commons;
 import com.javachina.ext.Funcs;
 import org.commonmark.Extension;

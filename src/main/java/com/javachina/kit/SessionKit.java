@@ -5,7 +5,7 @@ import com.blade.kit.StringKit;
 import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.http.wrapper.Session;
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 import com.javachina.model.LoginUser;
 
 import java.io.UnsupportedEncodingException;

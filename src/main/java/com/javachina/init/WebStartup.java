@@ -10,7 +10,7 @@ import com.blade.jdbc.ar.SampleActiveRecord;
 import com.blade.kit.base.Config;
 import com.blade.mvc.view.ViewSettings;
 import com.blade.mvc.view.template.JetbrickTemplateEngine;
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 import com.javachina.ext.Funcs;
 import jetbrick.template.JetGlobalContext;
 import jetbrick.template.resolver.GlobalResolver;

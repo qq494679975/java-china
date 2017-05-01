@@ -5,7 +5,7 @@ import com.blade.kit.StringKit;
 import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.interceptor.Interceptor;
-import com.javachina.Constant;
+import com.javachina.constants.Constant;
 import com.javachina.kit.SessionKit;
 import com.javachina.model.LoginUser;
 import com.javachina.service.UserService;
