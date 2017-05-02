@@ -14,7 +14,7 @@ import com.blade.mvc.http.Response;
 import com.blade.mvc.view.ModelAndView;
 import com.blade.mvc.view.RestResponse;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.dto.LoginUser;
 import com.javachina.kit.SessionKit;
 import com.javachina.model.Openid;
@@ -83,13 +83,13 @@ public class OAuthController extends BaseController {
             String login = user.getString("login");
 
             // 判断用户是否已经绑定
-            Openid openid = openIdService.getOpenid(Types.github.toString(), open_id);
+            Openid openid = openIdService.getOpenid(EventType.GITHUB, open_id);
             if (null == openid) {
                 Map<String, String> githubInfo = new HashMap<String, String>(3);
                 githubInfo.put("login_name", login);
                 githubInfo.put("open_id", open_id.toString());
 
-                SessionKit.set(request.session(), Types.github.toString(), githubInfo);
+                SessionKit.set(request.session(), EventType.GITHUB, githubInfo);
 
                 response.go("/oauth/user/bind");
             } else {
@@ -117,7 +117,7 @@ public class OAuthController extends BaseController {
 
     @Route(value = "/user/bind", method = HttpMethod.GET)
     public ModelAndView bindPage(Request request, Response response) {
-        Map<String, String> githubInfo = request.session().attribute(Types.github.toString());
+        Map<String, String> githubInfo = request.session().attribute(EventType.GITHUB);
         LoginUser loginUser = SessionKit.getLoginUser();
         if (null == githubInfo || null != loginUser) {
             response.go("/");
@@ -132,7 +132,7 @@ public class OAuthController extends BaseController {
     @Route(value = "/user/bind", method = HttpMethod.POST)
     @JSON
     public RestResponse bindCheck(Request request, Response response) {
-        Map<String, String> githubInfo = request.session().attribute(Types.github.toString());
+        Map<String, String> githubInfo = request.session().attribute(EventType.GITHUB);
         if (null == githubInfo) {
             response.go("/");
             return null;
@@ -162,7 +162,7 @@ public class OAuthController extends BaseController {
             }
 
             Integer open_id = Integer.valueOf(githubInfo.get("open_id"));
-            boolean flag = openIdService.save(Types.github.toString(), open_id, user.getUid());
+            boolean flag = openIdService.save(EventType.GITHUB, open_id, user.getUid());
             if (flag) {
                 SessionKit.setLoginUser(request.session(), user);
                 return RestResponse.ok();
@@ -184,9 +184,9 @@ public class OAuthController extends BaseController {
                 User user_ = userService.signup(login_name, pass_word, email);
                 if (null != user_) {
                     Integer open_id = Integer.valueOf(githubInfo.get("open_id"));
-                    boolean saveFlag = openIdService.save(Types.github.toString(), open_id, user_.getUid());
+                    boolean saveFlag = openIdService.save(EventType.GITHUB, open_id, user_.getUid());
                     if (saveFlag) {
-                        request.session().removeAttribute(Types.github.toString());
+                        request.session().removeAttribute(EventType.GITHUB);
                         return RestResponse.ok();
                     }
                 } else {

@@ -14,7 +14,6 @@ import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.view.ModelAndView;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
 import com.javachina.controller.BaseController;
 import com.javachina.model.Node;
 import com.javachina.model.User;
@@ -224,34 +223,18 @@ public class IndexController extends BaseController {
     public void updateStatus(Request request, Response response) {
         String type = request.query("type");
         Integer uid = request.queryAsInt("uid");
+        Integer status = request.queryAsInt("status");
+        Integer role_id = request.queryAsInt("role_id");
+
         if (StringKit.isBlank(type) || null == uid) {
             this.error(response, "缺少参数");
             return;
         }
-        Integer status = null;
-        Integer role_id = null;
-        if (type.equals(Types.activeAccount.toString()) ||
-                type.equals(Types.recoveryAccount.toString())) {
-            status = 1;
-        }
-
-        if (type.equals(Types.disable.toString())) {
-            status = 2;
-        }
-
-        if (type.equals(Types.removeAdmin.toString())) {
-            role_id = 5;
-        }
-
-        if (type.equals(Types.setAdmin.toString())) {
-            role_id = 3;
-        }
-
-        try {
+        try{
             // 重新发送激活邮件
-            if (type.equals(Types.resend.toString())) {
-                codesService.resend(uid);
-            }
+//            if (type.equals(Types.resend.toString())) {
+//                codesService.resend(uid);
+//            }
             if (null != status) {
                 userService.update(User.builder().uid(uid).status(status).build());
             }

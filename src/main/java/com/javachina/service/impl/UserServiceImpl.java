@@ -9,7 +9,7 @@ import com.blade.kit.BeanKit;
 import com.blade.kit.DateKit;
 import com.blade.kit.EncrypKit;
 import com.blade.kit.StringKit;
-import com.javachina.constants.Types;
+import com.javachina.constants.Actions;
 import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
@@ -94,7 +94,7 @@ public class UserServiceImpl implements UserService {
             userInfoService.save(uid.intValue());
 
             // 发送邮件通知
-            String code = codesService.save(user, Types.signup.toString());
+            String code = codesService.save(user, Actions.SIGNUP);
 
             //  发送注册邮件
             MailKit.sendSignup(user.getUsername(), user.getEmail(), code);

@@ -12,8 +12,8 @@ import com.blade.mvc.http.HttpMethod;
 import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.view.ModelAndView;
+import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
 import com.javachina.dto.HomeTopic;
 import com.javachina.dto.LoginUser;
 import com.javachina.dto.NodeTree;
@@ -187,7 +187,7 @@ public class IndexController extends BaseController {
             SessionKit.setCookie(response, Constant.JC_REFERRER_COOKIE, request.url());
         } else {
             // 查询是否收藏
-            boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(loginUser.getUid()).event_id(node.getNid().toString()).event_type("node").favorite_type(Types.favorites.toString()).build());
+            boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(loginUser.getUid()).event_id(node.getNid().toString()).event_type("node").favorite_type(Actions.FAVORITE).build());
             request.attribute("is_favorite", is_favorite);
         }
 

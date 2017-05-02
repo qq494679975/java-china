@@ -15,7 +15,7 @@ import com.blade.patchca.DefaultPatchca;
 import com.blade.patchca.Patchca;
 import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.kit.SessionKit;
@@ -23,8 +23,6 @@ import com.javachina.kit.Utils;
 import com.javachina.model.*;
 import com.javachina.service.*;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.HashMap;
@@ -121,7 +119,7 @@ public class MemberController extends BaseController {
         }
 
         Codes codes = codesService.getActivecode(code);
-        if (null == codes || !codes.getType().equals(Types.forgot.toString())) {
+        if (null == codes || !codes.getType().equals(EventType.FORGET)) {
             request.attribute(this.ERROR, "无效的激活码");
             return this.getView("reset_pwd");
         }
@@ -187,7 +185,7 @@ public class MemberController extends BaseController {
             request.attribute("is_follow", false);
             SessionKit.setCookie(response, Constant.JC_REFERRER_COOKIE, request.url());
         } else {
-            boolean is_follow = favoriteService.isFavorite(Favorite.builder().event_type("user").favorite_type(Types.following.toString()).uid(loginUser.getUid()).event_id(user.getUid().toString()).build());
+            boolean is_follow = favoriteService.isFavorite(Favorite.builder().event_type("user").favorite_type(Actions.FOLLOW).uid(loginUser.getUid()).event_id(user.getUid().toString()).build());
             request.attribute("is_follow", is_follow);
         }
 

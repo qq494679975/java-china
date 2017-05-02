@@ -5,7 +5,7 @@ import com.blade.ioc.annotation.Service;
 import com.blade.jdbc.ActiveRecord;
 import com.blade.kit.CollectionKit;
 import com.blade.kit.StringKit;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.model.Comment;
 import com.javachina.model.Options;
 import com.javachina.model.Topic;
@@ -73,9 +73,9 @@ public class OptionsServiceImpl implements OptionsService {
         int users = activeRecord.count(new User());
         int topics = activeRecord.count(new Topic());
 
-        this.update(Types.user_count.toString(), users);
-        this.update(Types.comment_count.toString(), comments);
-        this.update(Types.topic_count.toString(), topics);
+        this.update(EventType.USER_COUNT, users);
+        this.update(EventType.COMMENT_COUNT, comments);
+        this.update(EventType.TOPIC_COUNT, topics);
 
         return true;
     }

@@ -15,7 +15,7 @@ import com.blade.patchca.DefaultPatchca;
 import com.blade.patchca.Patchca;
 import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.kit.SessionKit;
@@ -112,7 +112,7 @@ public class AuthController extends BaseController {
      */
     @Route(value = "/signup", method = HttpMethod.GET)
     public ModelAndView show_signup(Request request) {
-        Object allow_signup = Constant.SYS_INFO.get(Types.allow_signup.toString());
+        Object allow_signup = Constant.SYS_INFO.get(EventType.ALLOW_SIGNUP);
         if (null != allow_signup && allow_signup.toString().equals("false")) {
             request.attribute(this.INFO, "暂时停止注册");
         }
@@ -241,7 +241,7 @@ public class AuthController extends BaseController {
         }
 
         // 找回密码
-        if (codes.getType().equals(Types.forgot.toString())) {
+        if (codes.getType().equals(EventType.FORGET)) {
             request.attribute("code", code);
             return this.getView("reset_pwd");
         }
@@ -252,7 +252,7 @@ public class AuthController extends BaseController {
             codesService.useCode(code);
 
             request.attribute(this.INFO, "激活成功，您可以凭密码登陆");
-            optionsService.updateCount(Types.user_count.toString(), +1);
+            optionsService.updateCount(EventType.USER_COUNT, +1);
             Constant.SYS_INFO = optionsService.getSystemInfo();
             Constant.VIEW_CONTEXT.set("sys_info", Constant.SYS_INFO);
 

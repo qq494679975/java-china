@@ -14,7 +14,7 @@ import com.blade.mvc.view.ModelAndView;
 import com.blade.mvc.view.RestResponse;
 import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.dto.HomeTopic;
 import com.javachina.dto.LoginUser;
 import com.javachina.dto.NodeTree;
@@ -301,11 +301,11 @@ public class TopicController extends BaseController {
         request.attribute("topic", topicMap);
 
         // 是否收藏
-        boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Types.favorites.toString()).event_id(topic.getTid()).build());
+        boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Actions.FAVORITE).event_id(topic.getTid()).build());
         request.attribute("is_favorite", is_favorite);
 
         // 是否点赞
-        boolean is_love = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Types.love.toString()).event_id(topic.getTid()).build());
+        boolean is_love = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Actions.LOVE).event_id(topic.getTid()).build());
         request.attribute("is_love", is_love);
 
         Take cp = new Take(Comment.class);
@@ -408,7 +408,7 @@ public class TopicController extends BaseController {
         }
 
         try {
-            boolean isFavorite = favoriteService.isFavorite(Favorite.builder().uid(user.getUid()).event_type("topic").favorite_type(Types.sinks.toString()).event_id(tid).build());
+            boolean isFavorite = favoriteService.isFavorite(Favorite.builder().uid(user.getUid()).event_type("topic").favorite_type(Actions.SINK).event_id(tid).build());
             if (!isFavorite) {
 //                favoriteService.update(Types.sinks.toString(), user.getUid(), tid);
 //                topicCountService.update(Types.sinks.toString(), tid, 1);

@@ -9,7 +9,7 @@ import com.blade.jdbc.model.Paginator;
 import com.blade.kit.CollectionKit;
 import com.blade.kit.DateKit;
 import com.blade.kit.StringKit;
-import com.javachina.constants.Types;
+import com.javachina.constants.EventType;
 import com.javachina.dto.HomeTopic;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
@@ -97,9 +97,9 @@ public class TopicServiceImpl implements TopicService {
         Integer uid = topic.getUid();
         this.updateWeight(tid);
         // 更新节点下的帖子数
-        nodeService.updateCount(topic.getNid(), Types.topics.toString(), +1);
+        nodeService.updateCount(topic.getNid(), EventType.TOPICS, +1);
         // 更新总贴数
-        optionsService.updateCount(Types.topic_count.toString(), +1);
+        optionsService.updateCount(EventType.TOPIC_COUNT, +1);
 
         // 通知@的人
         Set<String> atUsers = Utils.getAtUsers(topic.getContent());
@@ -129,9 +129,9 @@ public class TopicServiceImpl implements TopicService {
         activeRecord.update(temp);
 
         // 更新节点下的帖子数
-        nodeService.updateCount(topic.getNid(), Types.topics.toString(), +1);
+        nodeService.updateCount(topic.getNid(), EventType.TOPICS, +1);
         // 更新总贴数
-        optionsService.updateCount(Types.topic_count.toString(), +1);
+        optionsService.updateCount(EventType.TOPIC_COUNT, +1);
     }
 
     @Override
@@ -225,7 +225,7 @@ public class TopicServiceImpl implements TopicService {
                     }
                 }
                 // 更新总评论数
-                optionsService.updateCount(Types.comment_count.toString(), +1);
+                optionsService.updateCount(EventType.COMMENT_COUNT, +1);
             }
             return true;
         } catch (Exception e) {
