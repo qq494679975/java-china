@@ -146,24 +146,28 @@ public class TopicServiceImpl implements TopicService {
         User user = userService.getUserById(uid);
         Node node = nodeService.getNodeById(nid);
 
-        if (null == user || null == node) {
-            return null;
-        }
-
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("tid", tid);
         map.put("title", topic.getTitle());
         map.put("is_essence", topic.getIs_essence());
         map.put("create_time", topic.getCreated());
         map.put("update_time", topic.getUpdated());
-        map.put("user_name", user.getUsername());
+        map.put("comments", topic.getComments());
+
+        if (null != user) {
+            map.put("username", user.getUsername());
+            String avatar = Funcs.avatar_url(user.getAvatar());
+            map.put("avatar", avatar);
+        }
+
         map.put("uid", topic.getUid());
 
-        String avatar = Funcs.avatar_url(user.getAvatar());
 
-        map.put("avatar", avatar);
-        map.put("node_name", node.getTitle());
-        map.put("node_slug", node.getSlug());
+        if (null != node) {
+            map.put("node_name", node.getTitle());
+            map.put("node_slug", node.getSlug());
+        }
+
 
         if (topic.getComments() > 0) {
 //            Comment comment = commentService.getTopicLastComment(tid);
