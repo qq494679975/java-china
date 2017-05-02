@@ -15,18 +15,17 @@ import com.blade.mvc.view.ModelAndView;
 import com.javachina.constants.Constant;
 import com.javachina.constants.Types;
 import com.javachina.dto.HomeTopic;
+import com.javachina.dto.LoginUser;
+import com.javachina.dto.NodeTree;
 import com.javachina.kit.FamousDay;
 import com.javachina.kit.SessionKit;
 import com.javachina.kit.Utils;
-import com.javachina.model.LoginUser;
+import com.javachina.model.Favorite;
 import com.javachina.model.Node;
-import com.javachina.model.NodeTree;
 import com.javachina.service.FavoriteService;
 import com.javachina.service.NodeService;
-import com.javachina.service.NoticeService;
 import com.javachina.service.TopicService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -35,18 +34,14 @@ import java.util.Map;
  * 首页控制器
  */
 @Controller
+@Slf4j
 public class IndexController extends BaseController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(IndexController.class);
 
     @Inject
     private TopicService topicService;
 
     @Inject
     private NodeService nodeService;
-
-    @Inject
-    private NoticeService noticeService;
 
     @Inject
     private FavoriteService favoriteService;
@@ -69,7 +64,7 @@ public class IndexController extends BaseController {
         if (StringKit.isNotBlank(tab)) {
             Take np = new Take(Node.class);
             np.eq("is_del", 0).eq("slug", tab);
-            Node node = nodeService.getNode(np);
+            Node node = nodeService.getNodeByTake(np);
             if (null != node) {
                 nid = node.getNid();
                 request.attribute("tab", tab);
@@ -115,7 +110,7 @@ public class IndexController extends BaseController {
         if (StringKit.isNotBlank(tab)) {
             Take np = new Take(Node.class);
             np.eq("is_del", 0).eq("slug", tab);
-            Node node = nodeService.getNode(np);
+            Node node = nodeService.getNodeByTake(np);
             if (null != node) {
                 nid = node.getNid();
                 request.attribute("tab", tab);
@@ -181,7 +176,7 @@ public class IndexController extends BaseController {
         LoginUser loginUser = SessionKit.getLoginUser();
         Take np = new Take(Node.class);
         np.eq("is_del", 0).eq("slug", slug);
-        Node node = nodeService.getNode(np);
+        Node node = nodeService.getNodeByTake(np);
         if (null == node) {
             // 不存在的节点
             response.go("/");
@@ -192,7 +187,7 @@ public class IndexController extends BaseController {
             SessionKit.setCookie(response, Constant.JC_REFERRER_COOKIE, request.url());
         } else {
             // 查询是否收藏
-            boolean is_favorite = favoriteService.isFavorite(Types.node.toString(), loginUser.getUid(), node.getNid());
+            boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(loginUser.getUid()).event_id(node.getNid().toString()).event_type("node").favorite_type(Types.favorites.toString()).build());
             request.attribute("is_favorite", is_favorite);
         }
 
@@ -212,7 +207,7 @@ public class IndexController extends BaseController {
      */
     @Route(value = "/markdown", method = HttpMethod.GET)
     public String markdown() {
-        return ("markdown");
+        return "markdown";
     }
 
     /**

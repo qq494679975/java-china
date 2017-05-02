@@ -6,7 +6,7 @@ import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.http.wrapper.Session;
 import com.javachina.constants.Constant;
-import com.javachina.model.LoginUser;
+import com.javachina.dto.LoginUser;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;

@@ -4,7 +4,7 @@ import com.blade.jdbc.core.Take;
 import com.blade.jdbc.model.Paginator;
 import com.javachina.model.UserInfo;
 
-public interface UserinfoService {
+public interface UserInfoService {
 
     /**
      * 根据uid获取用户详细信息
@@ -12,7 +12,7 @@ public interface UserinfoService {
      * @param uid
      * @return
      */
-    UserInfo getUserinfo(Integer uid);
+    UserInfo getUserInfoById(Integer uid);
 
     /**
      * 分页获取用户信息

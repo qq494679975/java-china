@@ -1,5 +1,6 @@
 package com.javachina.kit;
 
+import com.blade.kit.HashidKit;
 import com.blade.kit.StringKit;
 import com.blade.kit.http.HttpRequest;
 import com.blade.kit.json.JSONKit;
@@ -292,6 +293,12 @@ public class Utils {
         byte[] cipherTextBytes = new BASE64Decoder().decodeBuffer(cipherText);
         byte[] decValue = cipher.doFinal(cipherTextBytes);
         return new String(decValue);
+    }
+
+    private static final HashidKit topicId = new HashidKit("java-china-topicid");
+
+    public static String genTopicID() {
+        return topicId.encode(System.currentTimeMillis());
     }
 
 }

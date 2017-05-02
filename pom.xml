@@ -13,7 +13,7 @@
         <mysql.version>5.1.38</mysql.version>
         <druid.version>1.0.24</druid.version>
         <blade.version>1.7.2-beta</blade.version>
-        <blade-jdbc.version>0.1.6-beta</blade-jdbc.version>
+        <blade-jdbc.version>0.1.6</blade-jdbc.version>
         <blade-tpl.verion>0.0.9</blade-tpl.verion>
         <blade-embed-jetty.version>0.1.3</blade-embed-jetty.version>
     </properties>
@@ -85,6 +85,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-email</artifactId>
             <version>1.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.14</version>
         </dependency>
 
     </dependencies>

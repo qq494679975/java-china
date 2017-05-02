@@ -1,4 +1,6 @@
-package com.javachina.model;
+package com.javachina.dto;
+
+import com.javachina.model.Node;
 
 import java.io.Serializable;
 import java.util.List;

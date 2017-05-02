@@ -1,4 +1,4 @@
-package com.javachina.model;
+package com.javachina.dto;
 
 public class LoginUser {
 

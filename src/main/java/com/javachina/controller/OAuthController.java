@@ -15,12 +15,13 @@ import com.blade.mvc.view.ModelAndView;
 import com.blade.mvc.view.RestResponse;
 import com.javachina.constants.Constant;
 import com.javachina.constants.Types;
+import com.javachina.dto.LoginUser;
 import com.javachina.kit.SessionKit;
-import com.javachina.model.LoginUser;
 import com.javachina.model.Openid;
 import com.javachina.model.User;
 import com.javachina.service.OpenIdService;
 import com.javachina.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +33,8 @@ import java.util.Map;
  * oauth认证控制器
  */
 @Controller("/oauth/")
+@Slf4j
 public class OAuthController extends BaseController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(OAuthController.class);
 
     @Inject
     private UserService userService;
@@ -52,7 +52,7 @@ public class OAuthController extends BaseController {
             String redirect_uri = URLEncoder.encode(Constant.GITHUB_REDIRECT_URL, "utf-8");
             response.redirect(String.format(url, Constant.GITHUB_CLIENT_ID, redirect_uri, StringKit.getRandomNumber(15)));
         } catch (Exception e) {
-            LOGGER.error("github回调失败", e);
+            log.error("github回调失败", e);
         }
     }
 
@@ -63,13 +63,13 @@ public class OAuthController extends BaseController {
     public ModelAndView githubCall(Request request, Response response) {
         String code = request.query("code");
         if (StringKit.isNotBlank(code)) {
-            LOGGER.info("code = {}", code);
+            log.info("code = {}", code);
 
             String body = HttpRequest.post("https://github.com/login/oauth/access_token", true,
                     "client_id", Constant.GITHUB_CLIENT_ID, "client_secret", Constant.GITHUB_CLIENT_SECRET, "code", code)
                     .accept("application/json").trustAllCerts().trustAllHosts().body();
 
-            LOGGER.info("body = {}", body);
+            log.info("body = {}", body);
 
             JSONObject result = JSONKit.parseObject(body);
             String access_token = result.getString("access_token");
@@ -93,7 +93,7 @@ public class OAuthController extends BaseController {
 
                 response.go("/oauth/user/bind");
             } else {
-                User user_ = userService.getUser(openid.getUid());
+                User user_ = userService.getUserById(openid.getUid());
                 if (null == user_) {
                     request.attribute(this.INFO, "不存在该用户");
                     return this.getView("info");
@@ -153,7 +153,7 @@ public class OAuthController extends BaseController {
                 return RestResponse.fail("不存在该用户");
             }
 
-            User user = userService.signin(login_name, pass_word);
+            LoginUser user = userService.signin(login_name, pass_word);
             if (null == user) {
                 return RestResponse.fail("密码错误");
             }
@@ -164,8 +164,7 @@ public class OAuthController extends BaseController {
             Integer open_id = Integer.valueOf(githubInfo.get("open_id"));
             boolean flag = openIdService.save(Types.github.toString(), open_id, user.getUid());
             if (flag) {
-                LoginUser loginUser = userService.getLoginUser(user, null);
-                SessionKit.setLoginUser(request.session(), loginUser);
+                SessionKit.setLoginUser(request.session(), user);
                 return RestResponse.ok();
             }
         }
@@ -194,7 +193,7 @@ public class OAuthController extends BaseController {
                     return RestResponse.fail();
                 }
             } catch (Exception e) {
-                LOGGER.error("注册失败", e);
+                log.error("注册失败", e);
             }
         }
 

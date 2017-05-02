@@ -1,8 +1,14 @@
 package com.javachina.controller;
 
+import com.blade.kit.StringKit;
 import com.blade.kit.json.JSONObject;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.view.ModelAndView;
+import com.blade.mvc.view.RestResponse;
+import com.javachina.exception.TipException;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +16,7 @@ import java.util.Map;
 /**
  * 控制器基类
  */
+@Slf4j
 public class BaseController {
 
     protected final String ERROR = "error";
@@ -66,6 +73,15 @@ public class BaseController {
         jsonObject.put("status", 500);
         jsonObject.put("msg", msg);
         response.json(jsonObject.toString());
+    }
+
+    public RestResponse fail(Exception e, String msg){
+        if (e instanceof TipException) {
+            msg = e.getMessage();
+        } else {
+            log.error(msg, e);
+        }
+        return RestResponse.fail(msg);
     }
 
     /**

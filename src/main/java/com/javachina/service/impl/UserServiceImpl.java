@@ -10,10 +10,11 @@ import com.blade.kit.DateKit;
 import com.blade.kit.EncrypKit;
 import com.blade.kit.StringKit;
 import com.javachina.constants.Types;
+import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
 import com.javachina.kit.MailKit;
-import com.javachina.model.LoginUser;
+import com.javachina.model.Remind;
 import com.javachina.model.User;
 import com.javachina.model.UserInfo;
 import com.javachina.service.*;
@@ -29,25 +30,19 @@ public class UserServiceImpl implements UserService {
     private ActiveRecord activeRecord;
 
     @Inject
-    private ActivecodeService activecodeService;
+    private CodesService codesService;
 
     @Inject
     private TopicService topicService;
 
     @Inject
-    private UserinfoService userinfoService;
-
-    @Inject
-    private FavoriteService favoriteService;
+    private UserInfoService userInfoService;
 
     @Inject
     private CommentService commentService;
 
-    @Inject
-    private NoticeService noticeService;
-
     @Override
-    public User getUser(Integer uid) {
+    public User getUserById(Integer uid) {
         if (null == uid) {
             return null;
         }
@@ -55,7 +50,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUser(Take take) {
+    public User getUserByTake(Take take) {
         if (null == take) {
             return null;
         }
@@ -71,40 +66,38 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User signup(String loginName, String passWord, String email) throws Exception {
-        if (StringKit.isBlank(loginName) || StringKit.isBlank(passWord) || StringKit.isBlank(email)) {
+    public User signup(String username, String passWord, String email) throws Exception {
+        if (StringKit.isBlank(username) || StringKit.isBlank(passWord) || StringKit.isBlank(email)) {
             return null;
         }
 
-        if (hasUser(loginName)) {
+        if (hasUser(username)) {
             return null;
         }
 
         int time = DateKit.getCurrentUnixTime();
-        String pwd = EncrypKit.md5(loginName + passWord);
+        String pwd = EncrypKit.md5(username + passWord);
         String avatar = "avatar/default/" + StringKit.getRandomNumber(1, 5) + ".png";
 
         try {
+
             User user = new User();
-            user.setLogin_name(loginName);
-            user.setPass_word(pwd);
+            user.setUsername(username);
+            user.setPassword(pwd);
             user.setEmail(email);
             user.setAvatar(avatar);
             user.setStatus(0);
-            user.setCreate_time(time);
-            user.setUpdate_time(time);
+            user.setCreated(time);
+            user.setUpdated(time);
             Long uid = activeRecord.insert(user);
-            if (null != uid) {
-                user.setUid(uid.intValue());
 
-                userinfoService.save(user.getUid());
+            userInfoService.save(uid.intValue());
 
-                // 发送邮件通知
-                String code = activecodeService.save(user, Types.signup.toString());
+            // 发送邮件通知
+            String code = codesService.save(user, Types.signup.toString());
 
-                //  发送注册邮件
-                MailKit.sendSignup(user.getLogin_name(), user.getEmail(), code);
-            }
+            //  发送注册邮件
+            MailKit.sendSignup(user.getUsername(), user.getEmail(), code);
             return user;
         } catch (Exception e) {
             throw e;
@@ -121,21 +114,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User signin(String loginName, String passWord) {
-        if (StringKit.isBlank(loginName) || StringKit.isBlank(passWord)) {
+    public LoginUser signin(String username, String passWord) {
+        if (StringKit.isBlank(username) || StringKit.isBlank(passWord)) {
             throw new TipException("用户名和密码不能为空");
         }
 
-        boolean hasUser = this.hasUser(loginName);
+        boolean hasUser = this.hasUser(username);
         if (!hasUser) {
             throw new TipException("该用户不存在");
         }
-        String pwd = EncrypKit.md5(loginName + passWord);
+
+        String pwd = EncrypKit.md5(username + passWord);
+
         Take take = new Take(User.class);
         take.eq("pass_word", pwd)
                 .in("status", 0, 1)
-                .eq("login_name", loginName)
-                .or("email", "=", loginName);
+                .eq("login_name", username)
+                .or("email", "=", username);
 
         User user = activeRecord.one(take);
         if (null == user) {
@@ -145,7 +140,12 @@ public class UserServiceImpl implements UserService {
         if (user.getStatus() == 0) {
             throw new TipException("该用户尚未激活，请登录邮箱激活帐号后登录");
         }
-        return user;
+        // 更新最后登录时间
+        User temp = new User();
+        temp.setUid(user.getUid());
+        temp.setLastlogin(DateKit.getCurrentUnixTime());
+        activeRecord.update(temp);
+        return this.getLoginUser(user, null);
     }
 
     @Override
@@ -155,24 +155,22 @@ public class UserServiceImpl implements UserService {
             User user = activeRecord.byId(User.class, uid);
             UserInfo userInfo = activeRecord.byId(UserInfo.class, uid);
             map = BeanKit.beanToMap(userInfo);
-            map.put("username", user.getLogin_name());
             map.put("uid", uid);
             map.put("email", user.getEmail());
             map.put("avatar", user.getAvatar());
-            if(StringKit.isNotBlank(userInfo.getInstructions())){
+            if (StringKit.isNotBlank(userInfo.getInstructions())) {
                 map.put("instructions", EmojiParser.parseToUnicode(userInfo.getInstructions()));
             }
-            if(StringKit.isNotBlank(userInfo.getSignature())){
+            if (StringKit.isNotBlank(userInfo.getSignature())) {
                 map.put("signature", EmojiParser.parseToUnicode(userInfo.getSignature()));
             }
-            map.put("create_time", user.getCreate_time());
+            map.put("create_time", user.getCreated());
             String avatar = Funcs.avatar_url(user.getAvatar());
             map.put("avatar", avatar);
         }
         return map;
     }
 
-    @Override
     public boolean updateStatus(Integer uid, Integer status) {
         if (null != uid && null != status) {
             User temp = new User();
@@ -191,7 +189,6 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
-    @Override
     public boolean updatePwd(Integer uid, String newpwd) {
         try {
             if (null == uid || StringKit.isBlank(newpwd)) {
@@ -199,7 +196,7 @@ public class UserServiceImpl implements UserService {
             }
             User user = new User();
             user.setUid(uid);
-            user.setPass_word(newpwd);
+            user.setPassword(newpwd);
             activeRecord.update(user);
             return true;
         } catch (Exception e) {
@@ -208,43 +205,37 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
-    @Override
     public LoginUser getLoginUser(User user, Integer uid) {
-        if (null == user) {
-            user = this.getUser(uid);
+        if(null == user){
+            user = this.getUserById(uid);
         }
         if (null != user) {
             LoginUser loginUser = new LoginUser();
             loginUser.setUid(user.getUid());
-            loginUser.setUser_name(user.getLogin_name());
-            loginUser.setPass_word(user.getPass_word());
+            loginUser.setUser_name(user.getUsername());
+            loginUser.setPass_word(user.getPassword());
             loginUser.setStatus(user.getStatus());
             loginUser.setRole_id(user.getRole_id());
             loginUser.setAvatar(user.getAvatar());
 
-            Integer comments = commentService.getComments(user.getUid());
+            Integer comments = 1;//commentService.getComments(user.getUid());
             loginUser.setComments(comments);
 
             Integer topics = topicService.getTopics(user.getUid());
             loginUser.setTopics(topics);
 
-            Integer notices = noticeService.getNotices(user.getUid());
-            loginUser.setNotices(notices);
+//            Integer notices = eventService.getNotices(user.getUid());
+//            loginUser.setNotices(notices);
 
-            UserInfo userInfo = userinfoService.getUserinfo(user.getUid());
+            UserInfo userInfo = userInfoService.getUserInfoById(user.getUid());
             if (null != userInfo) {
                 loginUser.setJobs(userInfo.getJobs());
                 loginUser.setNick_name(userInfo.getNick_name());
             }
 
-            Integer my_topics = favoriteService.favorites(Types.topic.toString(), user.getUid());
-            Integer my_nodes = favoriteService.favorites(Types.node.toString(), user.getUid());
-
-            loginUser.setMy_topics(my_topics);
-            loginUser.setMy_nodes(my_nodes);
-
-            Integer following = favoriteService.favorites(Types.following.toString(), user.getUid());
-            loginUser.setFollowing(following);
+            loginUser.setMy_topics(0);
+            loginUser.setMy_nodes(0);
+            loginUser.setFollowing(0);
 
             return loginUser;
         }
@@ -277,7 +268,6 @@ public class UserServiceImpl implements UserService {
         return null;
     }
 
-    @Override
     public boolean updateRole(Integer uid, Integer role_id) {
         try {
             if (null == uid || null == role_id || role_id == 1) {
@@ -294,4 +284,13 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
+    @Override
+    public Paginator<Remind> getReminds(Integer uid, int page, int limit) {
+        return null;
+    }
+
+    @Override
+    public Integer getNoReads(Integer uid) {
+        return null;
+    }
 }

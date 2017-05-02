@@ -16,15 +16,11 @@ public class UserlogServiceImpl implements UserlogService {
     private ActiveRecord activeRecord;
 
     @Override
-    public void save(final Integer uid, final String action, final String content) {
+    public void save(Userlog userlog) {
         final String ip = Utils.getIpAddr(WebContextHolder.me().request());
         Utils.run(() -> {
-            Userlog userlog = new Userlog();
-            userlog.setUid(uid);
-            userlog.setAction(action);
-            userlog.setContent(content);
-            userlog.setIp_addr(ip);
-            userlog.setCreate_time(DateKit.getCurrentUnixTime());
+            userlog.setIp(ip);
+            userlog.setCreated(DateKit.getCurrentUnixTime());
             activeRecord.insert(userlog);
         });
     }

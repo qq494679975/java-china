@@ -34,7 +34,7 @@ public class OpenIdServiceImpl implements OpenIdService {
                 openid.setType(type);
                 openid.setOpen_id(open_id);
                 openid.setUid(uid);
-                openid.setCreate_time(DateKit.getCurrentUnixTime());
+                openid.setCreated(DateKit.getCurrentUnixTime());
                 activeRecord.insert(openid);
                 return true;
             } catch (Exception e) {

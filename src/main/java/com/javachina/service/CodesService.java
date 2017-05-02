@@ -1,11 +1,11 @@
 package com.javachina.service;
 
-import com.javachina.model.Activecode;
+import com.javachina.model.Codes;
 import com.javachina.model.User;
 
-public interface ActivecodeService {
+public interface CodesService {
 
-    Activecode getActivecode(String code);
+    Codes getActivecode(String code);
 
     String save(User user, String type);
 

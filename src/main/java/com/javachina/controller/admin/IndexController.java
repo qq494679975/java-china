@@ -19,17 +19,15 @@ import com.javachina.controller.BaseController;
 import com.javachina.model.Node;
 import com.javachina.model.User;
 import com.javachina.service.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 
 @Controller("/admin/")
+@Slf4j
 public class IndexController extends BaseController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(IndexController.class);
 
     @Inject
     private TopicService topicService;
@@ -41,10 +39,10 @@ public class IndexController extends BaseController {
     private UserService userService;
 
     @Inject
-    private SettingsService settingsService;
+    private OptionsService optionsService;
 
     @Inject
-    private ActivecodeService activecodeService;
+    private CodesService codesService;
 
     private MapCache mapCache = MapCache.single();
 
@@ -114,13 +112,13 @@ public class IndexController extends BaseController {
         node.setDescription(description);
         node.setSlug(node_slug);
         node.setPid(pid);
-        node.setPic(node_pic);
+        node.setThumb_img(node_pic);
 
         try {
             nodeService.save(node);
             response.go("/admin/nodes");
         } catch (Exception e) {
-            LOGGER.error("添加节点失败", e);
+            log.error("添加节点失败", e);
             request.attribute(this.ERROR, "节点添加失败");
             request.attribute("node_name", title);
             request.attribute("node_slug", node_slug);
@@ -164,11 +162,11 @@ public class IndexController extends BaseController {
             node.setTitle(title);
             node.setDescription(description);
             node.setSlug(node_slug);
-            node.setPic(node_pic);
+            node.setThumb_img(node_pic);
             nodeService.update(node);
             this.success(response, "");
         } catch (Exception e) {
-            LOGGER.error("节点修改失败", e);
+            log.error("节点修改失败", e);
             this.error(response, "节点修改失败");
         }
     }
@@ -199,7 +197,7 @@ public class IndexController extends BaseController {
      */
     @Route(value = "settings")
     public ModelAndView show_settings(Request request, Response response) {
-        Map<String, Object> settings = settingsService.getSystemInfo();
+        Map<String, Object> settings = optionsService.getSystemInfo();
         request.attribute("settings", settings);
         return this.getAdminView("settings");
     }
@@ -213,8 +211,8 @@ public class IndexController extends BaseController {
         String site_keywords = request.query("site_keywords");
         String site_description = request.query("site_description");
         String allow_signup = request.query("allow_signup");
-        settingsService.update(site_title, site_keywords, site_description, allow_signup);
-        Constant.SYS_INFO = settingsService.getSystemInfo();
+        optionsService.update(site_title, site_keywords, site_description, allow_signup);
+        Constant.SYS_INFO = optionsService.getSystemInfo();
         Constant.VIEW_CONTEXT.set("sys_info", Constant.SYS_INFO);
         this.success(response, "");
     }
@@ -252,18 +250,19 @@ public class IndexController extends BaseController {
         try {
             // 重新发送激活邮件
             if (type.equals(Types.resend.toString())) {
-                activecodeService.resend(uid);
+                codesService.resend(uid);
             }
             if (null != status) {
-                userService.updateStatus(uid, status);
+                userService.update(User.builder().uid(uid).status(status).build());
             }
 
             if (null != role_id) {
-                userService.updateRole(uid, role_id);
+                userService.update(User.builder().uid(uid).role_id(role_id).build());
             }
+
             this.success(response, "");
         } catch (Exception e) {
-            LOGGER.error("", e);
+            log.error("", e);
         }
 
     }

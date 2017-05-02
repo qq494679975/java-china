@@ -15,7 +15,10 @@ import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
 import com.javachina.ext.PageHelper;
 import com.javachina.kit.Utils;
-import com.javachina.model.*;
+import com.javachina.model.Comment;
+import com.javachina.model.Node;
+import com.javachina.model.Topic;
+import com.javachina.model.User;
 import com.javachina.service.*;
 import com.vdurmont.emoji.EmojiParser;
 import org.sql2o.Sql2o;
@@ -38,16 +41,10 @@ public class TopicServiceImpl implements TopicService {
     private CommentService commentService;
 
     @Inject
-    private NoticeService noticeService;
-
-    @Inject
-    private SettingsService settingsService;
-
-    @Inject
-    private TopicCountService topicCountService;
+    private OptionsService optionsService;
 
     @Override
-    public Topic getTopic(Integer tid) {
+    public Topic getTopicById(String tid) {
         return activeRecord.byId(Topic.class, tid);
     }
 
@@ -86,23 +83,23 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public Integer publish(Topic topic) {
+    public String publish(Topic topic) {
         if (null == topic) {
             throw new TipException("帖子信息为空");
         }
         Integer time = DateKit.getCurrentUnixTime();
-        topic.setCreate_time(time);
-        topic.setUpdate_time(time);
+        String tid = Utils.genTopicID();
+        topic.setCreated(time);
+        topic.setUpdated(time);
         topic.setStatus(1);
 
-        Long tid = activeRecord.insert(topic);
+        activeRecord.insert(topic);
         Integer uid = topic.getUid();
-        topicCountService.save(tid.intValue(), time);
-        this.updateWeight(tid.intValue());
+        this.updateWeight(tid);
         // 更新节点下的帖子数
         nodeService.updateCount(topic.getNid(), Types.topics.toString(), +1);
         // 更新总贴数
-        settingsService.updateCount(Types.topic_count.toString(), +1);
+        optionsService.updateCount(Types.topic_count.toString(), +1);
 
         // 通知@的人
         Set<String> atUsers = Utils.getAtUsers(topic.getContent());
@@ -110,19 +107,19 @@ public class TopicServiceImpl implements TopicService {
             for (String user_name : atUsers) {
                 User user = userService.getUserByLoginName(user_name);
                 if (null != user && !user.getUid().equals(topic.getUid())) {
-                    noticeService.save(Types.topic_at.toString(), uid, user.getUid(), tid.intValue());
+//                    eventService.save(Types.topic_at.toString(), uid, user.getUid(), tid);
                 }
             }
         }
-        return tid.intValue();
+        return tid;
     }
 
     @Override
-    public void delete(Integer tid) {
+    public void delete(String tid) {
         if (null == tid) {
             throw new TipException("帖子id为空");
         }
-        Topic topic = this.getTopic(tid);
+        Topic topic = this.getTopicById(tid);
         if (null == topic) {
             throw new TipException("不存在该帖子");
         }
@@ -134,7 +131,7 @@ public class TopicServiceImpl implements TopicService {
         // 更新节点下的帖子数
         nodeService.updateCount(topic.getNid(), Types.topics.toString(), +1);
         // 更新总贴数
-        settingsService.updateCount(Types.topic_count.toString(), +1);
+        optionsService.updateCount(Types.topic_count.toString(), +1);
     }
 
     @Override
@@ -142,12 +139,12 @@ public class TopicServiceImpl implements TopicService {
         if (null == topic) {
             return null;
         }
-        Integer tid = topic.getTid();
+        String tid = topic.getTid();
         Integer uid = topic.getUid();
         Integer nid = topic.getNid();
 
-        User user = userService.getUser(uid);
-        Node node = nodeService.getNode(nid);
+        User user = userService.getUserById(uid);
+        Node node = nodeService.getNodeById(nid);
 
         if (null == user || null == node) {
             return null;
@@ -155,25 +152,11 @@ public class TopicServiceImpl implements TopicService {
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("tid", tid);
-
-        TopicCount topicCount = topicCountService.getCount(tid);
-        Integer views = 0, loves = 0, favorites = 0, comments = 0;
-        if (null != topicCount) {
-            views = topicCount.getViews();
-            loves = topicCount.getLoves();
-            favorites = topicCount.getFavorites();
-            comments = topicCount.getComments();
-        }
-
-        map.put("views", views);
-        map.put("loves", loves);
-        map.put("favorites", favorites);
-        map.put("comments", comments);
         map.put("title", topic.getTitle());
         map.put("is_essence", topic.getIs_essence());
-        map.put("create_time", topic.getCreate_time());
-        map.put("update_time", topic.getUpdate_time());
-        map.put("user_name", user.getLogin_name());
+        map.put("create_time", topic.getCreated());
+        map.put("update_time", topic.getUpdated());
+        map.put("user_name", user.getUsername());
         map.put("uid", topic.getUid());
 
         String avatar = Funcs.avatar_url(user.getAvatar());
@@ -182,12 +165,12 @@ public class TopicServiceImpl implements TopicService {
         map.put("node_name", node.getTitle());
         map.put("node_slug", node.getSlug());
 
-        if (comments > 0) {
-            Comment comment = commentService.getTopicLastComment(tid);
-            if (null != comment) {
-                User reply_user = userService.getUser(comment.getUid());
-                map.put("reply_name", reply_user.getLogin_name());
-            }
+        if (topic.getComments() > 0) {
+//            Comment comment = commentService.getTopicLastComment(tid);
+//            if (null != comment) {
+//                User reply_user = userService.getUserById(comment.getOwner_id());
+//                map.put("reply_name", reply_user.getUsername());
+//            }
         }
 
         if (isDetail) {
@@ -208,7 +191,7 @@ public class TopicServiceImpl implements TopicService {
      * @return
      */
     @Override
-    public boolean comment(Integer uid, Integer to_uid, Integer tid, String content, String ua) {
+    public boolean comment(Integer uid, Integer to_uid, String tid, String content, String ua) {
         try {
 
             if (null == tid || StringKit.isBlank(content)) {
@@ -226,30 +209,25 @@ public class TopicServiceImpl implements TopicService {
 
             content = EmojiParser.parseToAliases(content);
 
-            Integer cid = commentService.save(uid, to_uid, tid, content, ua);
-            if (null != cid) {
-
-                topicCountService.update(Types.comments.toString(), tid, 1);
-                this.updateWeight(tid);
-
-                // 通知
-                if (!uid.equals(to_uid)) {
-                    noticeService.save(Types.comment.toString(), uid, to_uid, tid);
-                    // 通知@的用户
-                    Set<String> atUsers = Utils.getAtUsers(content);
-                    if (CollectionKit.isNotEmpty(atUsers)) {
-                        for (String user_name : atUsers) {
-                            User user = userService.getUserByLoginName(user_name);
-                            if (null != user && !user.getUid().equals(uid)) {
-                                noticeService.save(Types.comment_at.toString(), uid, user.getUid(), cid);
-                            }
+            Integer cid = 1;//commentService.save(uid, to_uid, tid, content, ua);
+            this.updateWeight(tid);
+            // 通知
+            if (!uid.equals(to_uid)) {
+//                eventService.save(Types.comment.toString(), uid, to_uid, tid);
+                // 通知@的用户
+                Set<String> atUsers = Utils.getAtUsers(content);
+                if (CollectionKit.isNotEmpty(atUsers)) {
+                    for (String user_name : atUsers) {
+                        User user = userService.getUserByLoginName(user_name);
+                        if (null != user && !user.getUid().equals(uid)) {
+//                            eventService.save(Types.comment_at.toString(), uid, user.getUid(), tid);
                         }
                     }
-                    // 更新总评论数
-                    settingsService.updateCount(Types.comment_count.toString(), +1);
                 }
-                return true;
+                // 更新总评论数
+                optionsService.updateCount(Types.comment_count.toString(), +1);
             }
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -268,7 +246,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public Integer update(Integer tid, Integer nid, String title, String content) {
+    public String update(String tid, Integer nid, String title, String content) {
         if (null != tid && null != nid && StringKit.isNotBlank(title) && StringKit.isNotBlank(content)) {
             try {
                 Topic topic = new Topic();
@@ -276,7 +254,7 @@ public class TopicServiceImpl implements TopicService {
                 topic.setNid(nid);
                 topic.setTitle(title);
                 topic.setContent(content);
-                topic.setUpdate_time(DateKit.getCurrentUnixTime());
+                topic.setUpdated(DateKit.getCurrentUnixTime());
                 activeRecord.update(topic);
                 return tid;
             } catch (Exception e) {
@@ -305,9 +283,9 @@ public class TopicServiceImpl implements TopicService {
     @Override
     public void refreshWeight() {
         try {
-            List<Integer> topics = activeRecord.list(Integer.class, "select tid from t_topic where status = 1");
+            List<String> topics = activeRecord.list(String.class, "select tid from t_topic where status = 1");
             if (null != topics) {
-                for (Integer tid : topics) {
+                for (String tid : topics) {
                     this.updateWeight(tid);
                 }
             }
@@ -316,7 +294,12 @@ public class TopicServiceImpl implements TopicService {
         }
     }
 
-    public void updateWeight(Integer tid, Integer loves, Integer favorites, Integer comment, Integer sinks, Integer create_time) {
+    @Override
+    public void updateWeight(String tid) {
+        updateWeight(this.getTopicById(tid));
+    }
+
+    public void updateWeight(String tid, Integer loves, Integer favorites, Integer comment, Integer sinks, Integer create_time) {
         try {
             double weight = Utils.getWeight(loves, favorites, comment, sinks, create_time);
             Topic topic = new Topic();
@@ -329,7 +312,7 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public void essence(Integer tid, Integer count) {
+    public void essence(String tid, Integer count) {
         try {
             Topic topic = new Topic();
             topic.setTid(tid);
@@ -340,20 +323,17 @@ public class TopicServiceImpl implements TopicService {
         }
     }
 
-    @Override
-    public void updateWeight(Integer tid) {
+    public void updateWeight(Topic topic) {
         try {
-            if (null == tid) {
-                throw new TipException("帖子id为空");
+            if (null == topic) {
+                throw new TipException("帖子为空");
             }
-
-            TopicCount topicCount = topicCountService.getCount(tid);
-            Integer loves = topicCount.getLoves();
-            Integer favorites = topicCount.getFavorites();
-            Integer comment = topicCount.getComments();
-            Integer sinks = topicCount.getSinks();
-            Integer create_time = topicCount.getCreate_time();
-            this.updateWeight(tid, loves, favorites, comment, sinks, create_time);
+            Integer loves = topic.getLoves();
+            Integer favorites = topic.getFavorites();
+            Integer comment = topic.getComments();
+            Integer sinks = topic.getSinks();
+            Integer create_time = topic.getCreated();
+            this.updateWeight(topic.getTid(), loves, favorites, comment, sinks, create_time);
         } catch (Exception e) {
             throw e;
         }

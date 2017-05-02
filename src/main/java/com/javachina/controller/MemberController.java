@@ -16,57 +16,54 @@ import com.blade.patchca.Patchca;
 import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
 import com.javachina.constants.Types;
+import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.kit.SessionKit;
 import com.javachina.kit.Utils;
 import com.javachina.model.*;
 import com.javachina.service.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * 用户控制器
  */
 @Controller
+@Slf4j
 public class MemberController extends BaseController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(MemberController.class);
 
     public static final String CLASSPATH = MemberController.class.getClassLoader().getResource("").getPath();
 
     public static final String upDir = CLASSPATH + "upload/";
 
     @Inject
-    private SettingsService settingsService;
+    private OptionsService optionsService;
 
     @Inject
-    private ActivecodeService activecodeService;
+    private CodesService codesService;
 
     @Inject
     private UserService userService;
 
     @Inject
-    private UserinfoService userinfoService;
+    private UserInfoService userInfoService;
 
     @Inject
     private CommentService commentService;
-
-    @Inject
-    private NoticeService noticeService;
-
-    @Inject
-    private FavoriteService favoriteService;
 
     @Inject
     private TopicService topicService;
 
     @Inject
     private UserlogService userlogService;
+
+    @Inject
+    private FavoriteService favoriteService;
 
     private Patchca patchca = new DefaultPatchca();
 
@@ -80,29 +77,20 @@ public class MemberController extends BaseController {
             response.text("0");
             return;
         }
-
-        Integer notices = noticeService.getNotices(user.getUid());
-        response.text(notices.toString());
     }
 
     /**
      * 通知列表
      */
     @Route(value = "/notices", method = HttpMethod.GET)
-    public ModelAndView notices(Request request, Response response) {
+    public ModelAndView notices(Request request, Response response,
+                                @QueryParam(defaultValue = "1", value = "page") Integer page,
+                                @QueryParam(defaultValue = "15", value = "limit") Integer limit) {
+
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
             response.go("/signin");
             return null;
-        }
-        Integer page = request.queryInt("p", 1);
-
-        Paginator<Map<String, Object>> noticePage = noticeService.getNoticePage(user.getUid(), page, 10);
-        request.attribute("noticePage", noticePage);
-
-        // 清空我的通知
-        if (null != noticePage && noticePage.getList().size() > 0) {
-            noticeService.read(user.getUid());
         }
 
         return this.getView("notices");
@@ -113,60 +101,60 @@ public class MemberController extends BaseController {
      */
     @Route(value = "/reset_pwd", method = HttpMethod.POST)
     public ModelAndView reset_pwd(Request request, @QueryParam String code,
-                                  @QueryParam String pass_word,
-                                  @QueryParam String re_pass_word) {
+                                  @QueryParam String password,
+                                  @QueryParam String re_password) {
 
-        if (StringKit.isBlank(code) || StringKit.isBlank(pass_word) || StringKit.isBlank(re_pass_word)) {
+        if (StringKit.isBlank(code) || StringKit.isBlank(password) || StringKit.isBlank(re_password)) {
             return null;
         }
 
         request.attribute("code", code);
 
-        if (!pass_word.equals(re_pass_word)) {
+        if (!password.equals(re_password)) {
             request.attribute(this.ERROR, "两次密码不一致，请确认后提交");
             return this.getView("reset_pwd");
         }
 
-        if (pass_word.length() > 20 || pass_word.length() < 6) {
+        if (password.length() > 20 || password.length() < 6) {
             request.attribute(this.ERROR, "请输入6-20位字符的密码");
             return this.getView("reset_pwd");
         }
 
-        Activecode activecode = activecodeService.getActivecode(code);
-        if (null == activecode || !activecode.getType().equals(Types.forgot.toString())) {
+        Codes codes = codesService.getActivecode(code);
+        if (null == codes || !codes.getType().equals(Types.forgot.toString())) {
             request.attribute(this.ERROR, "无效的激活码");
             return this.getView("reset_pwd");
         }
 
-        Integer expries = activecode.getExpires_time();
+        Integer expries = codes.getExpired();
         if (expries < DateKit.getCurrentUnixTime()) {
             request.attribute(this.ERROR, "该激活码已经过期，请重新发送");
             return this.getView("reset_pwd");
         }
 
-        if (activecode.getIs_use() == 1) {
+        if (codes.getIs_use() == 1) {
             request.attribute(this.ERROR, "激活码已经被使用");
             return this.getView("reset_pwd");
         }
 
-        User user = userService.getUser(activecode.getUid());
+        User user = userService.getUserById(codes.getUid());
         if (null == user) {
             request.attribute(this.ERROR, "激活码已经被使用");
             return this.getView("reset_pwd");
         }
 
-        String new_pwd = EncrypKit.md5(user.getLogin_name() + pass_word);
+        String new_pwd = EncrypKit.md5(user.getUsername() + password);
 
         try {
-            userService.updatePwd(user.getUid(), new_pwd);
-            activecodeService.useCode(code);
+            userService.update(User.builder().uid(user.getUid()).password(new_pwd).build());
+            codesService.useCode(code);
             request.attribute(this.INFO, "密码修改成功，您可以直接登录！");
         } catch (Exception e) {
             String msg = "密码修改失败";
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             request.attribute(this.ERROR, msg);
         }
@@ -183,7 +171,7 @@ public class MemberController extends BaseController {
         Take up = new Take(User.class);
         up.eq("status", 1).eq("login_name", username);
 
-        User user = userService.getUser(up);
+        User user = userService.getUserByTake(up);
         if (null == user) {
             // 不存在的用户
             response.text("not found user.");
@@ -199,7 +187,7 @@ public class MemberController extends BaseController {
             request.attribute("is_follow", false);
             SessionKit.setCookie(response, Constant.JC_REFERRER_COOKIE, request.url());
         } else {
-            boolean is_follow = favoriteService.isFavorite(Types.following.toString(), loginUser.getUid(), user.getUid());
+            boolean is_follow = favoriteService.isFavorite(Favorite.builder().event_type("user").favorite_type(Types.following.toString()).uid(loginUser.getUid()).event_id(user.getUid().toString()).build());
             request.attribute("is_follow", is_follow);
         }
 
@@ -212,7 +200,7 @@ public class MemberController extends BaseController {
         // 最新发布的回复
         Take cp = new Take(Comment.class);
         cp.eq("uid", user.getUid()).orderby("create_time desc").page(1, 10);
-        Paginator<Map<String, Object>> commentPage = commentService.getPageListMap(cp);
+        Paginator<Map<String, Object>> commentPage = null;//commentService.getPageListMap(cp);
         request.attribute("commentPage", commentPage);
 
         return this.getView("member_detail");
@@ -231,8 +219,8 @@ public class MemberController extends BaseController {
         }
 
         Integer page = request.queryInt("p", 1);
-        Paginator<Map<String, Object>> favoritesPage = favoriteService.getMyTopics(user.getUid(), page, 10);
-        request.attribute("favoritesPage", favoritesPage);
+//        Paginator<Map<String, Object>> favoritesPage = favoriteService.getMyTopics(user.getUid(), page, 10);
+//        request.attribute("favoritesPage", favoritesPage);
 
         return this.getView("my_topics");
     }
@@ -249,8 +237,8 @@ public class MemberController extends BaseController {
             return null;
         }
 
-        List<Map<String, Object>> nodes = favoriteService.getMyNodes(user.getUid());
-        request.attribute("nodes", nodes);
+//        List<Map<String, Object>> nodes = favoriteService.getMyNodes(user.getUid());
+//        request.attribute("nodes", nodes);
 
         return this.getView("my_nodes");
     }
@@ -268,8 +256,8 @@ public class MemberController extends BaseController {
         }
 
         Integer page = request.queryInt("p", 1);
-        Paginator<Map<String, Object>> followingPage = favoriteService.getFollowing(user.getUid(), page, 10);
-        request.attribute("followingPage", followingPage);
+//        Paginator<Map<String, Object>> followingPage = favoriteService.getFollowing(user.getUid(), page, 10);
+//        request.attribute("followingPage", followingPage);
 
         return this.getView("following");
     }
@@ -294,9 +282,9 @@ public class MemberController extends BaseController {
             return RestResponse.fail();
         }
 
-        favoriteService.update(type, user.getUid(), event_id);
-        LoginUser loginUser = userService.getLoginUser(null, user.getUid());
-        SessionKit.setLoginUser(request.session(), loginUser);
+//        favoriteService.update(type, user.getUid(), event_id);
+//        LoginUser loginUser = userService.getLoginUser(null, user.getUid());
+//        SessionKit.setLoginUser(request.session(), loginUser);
         return RestResponse.ok();
     }
 
@@ -347,7 +335,7 @@ public class MemberController extends BaseController {
                 if (e instanceof TipException) {
                     msg = e.getMessage();
                 } else {
-                    LOGGER.error(msg, e);
+                    log.error(msg, e);
                 }
                 return RestResponse.fail(msg);
             }
@@ -375,17 +363,17 @@ public class MemberController extends BaseController {
                 userInfo.setSignature(signature);
                 userInfo.setInstructions(instructions);
 
-                userinfoService.update(userInfo);
+                userInfoService.update(userInfo);
 
-                LoginUser loginUserTemp = userService.getLoginUser(null, loginUser.getUid());
-                SessionKit.setLoginUser(request.session(), loginUserTemp);
+//                LoginUser loginUserTemp = userService.getLoginUser(null, loginUser.getUid());
+//                SessionKit.setLoginUser(request.session(), loginUserTemp);
                 return RestResponse.ok();
             } catch (Exception e) {
                 String msg = "修改失败";
                 if (e instanceof TipException) {
                     msg = e.getMessage();
                 } else {
-                    LOGGER.error(msg, e);
+                    log.error(msg, e);
                 }
                 return RestResponse.fail(msg);
             }
@@ -413,17 +401,18 @@ public class MemberController extends BaseController {
 
             try {
                 String new_pwd = EncrypKit.md5(loginUser.getUser_name() + newpwd);
-                userService.updatePwd(loginUser.getUid(), new_pwd);
-                LoginUser loginUserTemp = userService.getLoginUser(null, loginUser.getUid());
-                SessionKit.setLoginUser(request.session(), loginUserTemp);
-                userlogService.save(loginUser.getUid(), Actions.UPDATE_PWD, new_pwd);
+                userService.update(User.builder().uid(loginUser.getUid()).password(new_pwd).build());
+
+//                LoginUser loginUserTemp = userService.getLoginUser(null, loginUser.getUid());
+//                SessionKit.setLoginUser(request.session(), loginUserTemp);
+                userlogService.save(Userlog.builder().uid(loginUser.getUid()).action(Actions.UPDATE_PWD).content(new_pwd).build());
                 return RestResponse.ok();
             } catch (Exception e) {
                 String msg = "密码修改失败";
                 if (e instanceof TipException) {
                     msg = e.getMessage();
                 } else {
-                    LOGGER.error(msg, e);
+                    log.error(msg, e);
                 }
                 return RestResponse.fail(msg);
             }
@@ -470,7 +459,7 @@ public class MemberController extends BaseController {
                 return RestResponse.ok(res);
             } catch (Exception e) {
                 String msg = "上传失败";
-                LOGGER.error(msg, e);
+                log.error(msg, e);
                 return RestResponse.fail(msg);
             }
         }

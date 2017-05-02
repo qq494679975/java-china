@@ -7,10 +7,10 @@ import com.blade.jdbc.core.Take;
 import com.blade.jdbc.model.Paginator;
 import com.blade.kit.DateKit;
 import com.blade.kit.StringKit;
+import com.javachina.dto.NodeTree;
 import com.javachina.exception.TipException;
 import com.javachina.ext.Funcs;
 import com.javachina.model.Node;
-import com.javachina.model.NodeTree;
 import com.javachina.service.NodeService;
 
 import java.util.ArrayList;
@@ -24,17 +24,16 @@ public class NodeServiceImpl implements NodeService {
     @Inject
     private ActiveRecord activeRecord;
 
-    @Override
-    public Node getNode(Integer nid) {
+    public Node getNodeById(Integer nid) {
         Node node = activeRecord.byId(Node.class, nid);
-        if (null != node && node.getIs_del() == 0) {
+        if (null != node && node.getStatus() == 0) {
             return node;
         }
         return null;
     }
 
     @Override
-    public Node getNode(Take take) {
+    public Node getNodeByTake(Take take) {
         return activeRecord.one(take);
     }
 
@@ -98,7 +97,7 @@ public class NodeServiceImpl implements NodeService {
 
         List<Node> nodes = nodePage.getList();
 
-        List<Map<String, Object>> nodeMaps = new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> nodeMaps = new ArrayList<>();
         if (null != nodes && nodes.size() > 0) {
             for (Node node : nodes) {
                 Map<String, Object> map = this.getNodeDetail(node, null);
@@ -120,8 +119,8 @@ public class NodeServiceImpl implements NodeService {
         }
         try {
             Integer time = DateKit.getCurrentUnixTime();
-            node.setCreate_time(time);
-            node.setUpdate_time(time);
+            node.setCreated(time);
+            node.setUpdated(time);
             activeRecord.insert(node);
         } catch (Exception e) {
             throw e;
@@ -136,7 +135,7 @@ public class NodeServiceImpl implements NodeService {
         try {
             Node temp = new Node();
             temp.setNid(nid);
-            temp.setIs_del(1);
+            temp.setStatus(0);
             activeRecord.update(temp);
         } catch (Exception e) {
             throw e;
@@ -145,9 +144,9 @@ public class NodeServiceImpl implements NodeService {
 
     @Override
     public Map<String, Object> getNodeDetail(Node node, Integer nid) {
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         if (null == node) {
-            node = this.getNode(nid);
+            node = this.getNodeById(nid);
         }
         if (null != node) {
             map.put("nid", node.getNid());
@@ -156,8 +155,8 @@ public class NodeServiceImpl implements NodeService {
             map.put("topics", node.getTopics());
             map.put("pid", node.getPid());
 
-            if (node.getPid() > 0) {
-                Node parent = this.getNode(node.getPid());
+            if (node.getPid() != null) {
+                Node parent = this.getNodeById(node.getPid());
                 if (null != parent) {
                     map.put("parent_name", parent.getTitle());
                 }
@@ -167,8 +166,8 @@ public class NodeServiceImpl implements NodeService {
             Integer childs = getNodeCount(node.getNid());
             map.put("childs", childs);
             map.put("description", node.getDescription());
-            if (StringKit.isNotBlank(node.getPic())) {
-                String pic = Funcs.avatar_url(node.getPic());
+            if (StringKit.isNotBlank(node.getThumb_img())) {
+                String pic = Funcs.avatar_url(node.getThumb_img());
                 map.put("pic", pic);
             }
         }
@@ -178,7 +177,7 @@ public class NodeServiceImpl implements NodeService {
     private Integer getNodeCount(Integer nid) {
         Node node = new Node();
         node.setPid(nid);
-        node.setIs_del(0);
+        node.setStatus(1);
         return activeRecord.count(node);
     }
 

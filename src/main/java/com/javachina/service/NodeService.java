@@ -3,16 +3,16 @@ package com.javachina.service;
 import com.blade.jdbc.core.Take;
 import com.blade.jdbc.model.Paginator;
 import com.javachina.model.Node;
-import com.javachina.model.NodeTree;
+import com.javachina.dto.NodeTree;
 
 import java.util.List;
 import java.util.Map;
 
 public interface NodeService {
 
-    Node getNode(Integer nid);
+    Node getNodeById(Integer nid);
 
-    Node getNode(Take take);
+    Node getNodeByTake(Take take);
 
     Map<String, Object> getNodeDetail(Node node, Integer nid);
 

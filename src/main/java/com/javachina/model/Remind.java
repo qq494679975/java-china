@@ -9,21 +9,23 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * Userlog对象
+ * Settings对象
  */
-@Table(name = "t_userlog", pk = "id")
+@Table(name = "t_remind", pk = "id")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class Userlog implements Serializable {
+public class Remind implements Serializable {
 
     private Integer id;
-    private Integer uid;
-    private String action;
+    private String from_user;
+    private Integer to_uid;
+    private String event_id;
+    private String title;
     private String content;
-    private String ip;
-    private String agent;
+    private String remind_type;
+    private Boolean is_read;
     private Integer created;
 
 }

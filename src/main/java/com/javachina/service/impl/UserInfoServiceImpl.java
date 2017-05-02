@@ -7,19 +7,19 @@ import com.blade.jdbc.core.Take;
 import com.blade.jdbc.model.Paginator;
 import com.blade.kit.StringKit;
 import com.javachina.model.UserInfo;
-import com.javachina.service.UserinfoService;
+import com.javachina.service.UserInfoService;
 import com.vdurmont.emoji.EmojiParser;
 
 import java.util.List;
 
 @Service
-public class UserinfoServiceImpl implements UserinfoService {
+public class UserInfoServiceImpl implements UserInfoService {
 
     @Inject
     private ActiveRecord activeRecord;
 
     @Override
-    public UserInfo getUserinfo(Integer uid) {
+    public UserInfo getUserInfoById(Integer uid) {
         return activeRecord.byId(UserInfo.class, uid);
     }
 

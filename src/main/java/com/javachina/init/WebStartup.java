@@ -14,6 +14,7 @@ import com.javachina.constants.Constant;
 import com.javachina.ext.Funcs;
 import jetbrick.template.JetGlobalContext;
 import jetbrick.template.resolver.GlobalResolver;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +26,8 @@ import java.util.Properties;
 /**
  * Created by biezhi on 2017/3/15.
  */
+@Slf4j
 public class WebStartup implements BeanProcessor, WebContextListener {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(WebStartup.class);
 
     @Override
     public void init(BConfig bConfig, ServletContext sec) {
@@ -79,7 +79,7 @@ public class WebStartup implements BeanProcessor, WebContextListener {
             ActiveRecord activeRecord = new SampleActiveRecord(dataSource);
             ioc.addBean(activeRecord);
         } catch (Exception ex) {
-            LOGGER.error("初始化数据库配置失败", ex);
+            log.error("初始化数据库配置失败", ex);
         }
     }
 }

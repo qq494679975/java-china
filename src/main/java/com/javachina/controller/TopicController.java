@@ -16,13 +16,16 @@ import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
 import com.javachina.constants.Types;
 import com.javachina.dto.HomeTopic;
+import com.javachina.dto.LoginUser;
+import com.javachina.dto.NodeTree;
 import com.javachina.exception.TipException;
 import com.javachina.kit.SessionKit;
 import com.javachina.model.Comment;
-import com.javachina.model.LoginUser;
-import com.javachina.model.NodeTree;
+import com.javachina.model.Favorite;
 import com.javachina.model.Topic;
+import com.javachina.model.Userlog;
 import com.javachina.service.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,15 +33,11 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
+@Slf4j
 public class TopicController extends BaseController {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(TopicController.class);
 
     @Inject
     private TopicService topicService;
-
-    @Inject
-    private TopicCountService topicCountService;
 
     @Inject
     private NodeService nodeService;
@@ -47,10 +46,7 @@ public class TopicController extends BaseController {
     private CommentService commentService;
 
     @Inject
-    private SettingsService settingsService;
-
-    @Inject
-    private FavoriteService favoriteService;
+    private OptionsService optionsService;
 
     @Inject
     private UserService userService;
@@ -59,7 +55,7 @@ public class TopicController extends BaseController {
     private UserlogService userlogService;
 
     @Inject
-    private TopicCountService typeCountService;
+    private FavoriteService favoriteService;
 
     private MapCache mapCache = MapCache.single();
 
@@ -83,7 +79,7 @@ public class TopicController extends BaseController {
      * 编辑帖子页面
      */
     @Route(value = "/topic/edit/:tid", method = HttpMethod.GET)
-    public ModelAndView show_ediot_topic(@PathParam("tid") Integer tid, Request request, Response response) {
+    public ModelAndView show_ediot_topic(@PathParam("tid") String tid, Request request, Response response) {
 
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
@@ -91,7 +87,7 @@ public class TopicController extends BaseController {
             return null;
         }
 
-        Topic topic = topicService.getTopic(tid);
+        Topic topic = topicService.getTopicById(tid);
         if (null == topic) {
             request.attribute(this.ERROR, "不存在该帖子");
             return this.getView("info");
@@ -103,7 +99,7 @@ public class TopicController extends BaseController {
         }
 
         // 超过300秒
-        if ((DateKit.getCurrentUnixTime() - topic.getCreate_time()) > 300) {
+        if ((DateKit.getCurrentUnixTime() - topic.getCreated()) > 300) {
             request.attribute(this.ERROR, "发帖已经超过300秒，不允许编辑");
             return this.getView("info");
         }
@@ -120,7 +116,7 @@ public class TopicController extends BaseController {
     @Route(value = "/topic/edit", method = HttpMethod.POST)
     @JSON
     public RestResponse edit_topic(Request request, Response response) {
-        Integer tid = request.queryAsInt("tid");
+        String tid = request.query("tid");
         String title = request.query("title");
         String content = request.query("content");
         Integer nid = request.queryAsInt("nid");
@@ -135,7 +131,7 @@ public class TopicController extends BaseController {
         }
 
         // 不存在该帖子
-        Topic topic = topicService.getTopic(tid);
+        Topic topic = topicService.getTopicById(tid);
         if (null == topic) {
             return RestResponse.fail("不存在该帖子");
         }
@@ -146,7 +142,7 @@ public class TopicController extends BaseController {
         }
 
         // 超过300秒
-        if ((DateKit.getCurrentUnixTime() - topic.getCreate_time()) > 300) {
+        if ((DateKit.getCurrentUnixTime() - topic.getCreated()) > 300) {
             return RestResponse.fail("超过300秒禁止编辑");
         }
 
@@ -174,7 +170,7 @@ public class TopicController extends BaseController {
         try {
             // 编辑帖子
             topicService.update(tid, nid, title, content);
-            userlogService.save(user.getUid(), Actions.UPDATE_TOPIC, content);
+            userlogService.save(Userlog.builder().uid(user.getUid()).action(Actions.UPDATE_TOPIC).content(content).build());
 
             return RestResponse.ok(tid);
         } catch (Exception e) {
@@ -182,7 +178,7 @@ public class TopicController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }
@@ -231,17 +227,17 @@ public class TopicController extends BaseController {
             topic.setTitle(title);
             topic.setContent(content);
             topic.setIs_top(0);
-            Integer tid = topicService.publish(topic);
-            Constant.SYS_INFO = settingsService.getSystemInfo();
+            String tid = topicService.publish(topic);
+            Constant.SYS_INFO = optionsService.getSystemInfo();
             Constant.VIEW_CONTEXT.set("sys_info", Constant.SYS_INFO);
-            userlogService.save(user.getUid(), Actions.ADD_TOPIC, content);
+            userlogService.save(Userlog.builder().uid(user.getUid()).action(Actions.ADD_TOPIC).content(content).build());
             return RestResponse.ok(tid);
         } catch (Exception e) {
             String msg = "发布帖子失败";
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }
@@ -256,7 +252,7 @@ public class TopicController extends BaseController {
      * 帖子详情页面
      */
     @Route(value = "/topic/:tid", method = HttpMethod.GET)
-    public ModelAndView show_topic(@PathParam("tid") Integer tid, Request request, Response response) {
+    public ModelAndView show_topic(@PathParam("tid") String tid, Request request, Response response) {
 
         LoginUser user = SessionKit.getLoginUser();
 
@@ -267,7 +263,7 @@ public class TopicController extends BaseController {
             SessionKit.setCookie(response, Constant.JC_REFERRER_COOKIE, request.url());
         }
 
-        Topic topic = topicService.getTopic(tid);
+        Topic topic = topicService.getTopicById(tid);
         if (null == topic || topic.getStatus() != 1) {
             response.go("/");
             return null;
@@ -284,11 +280,11 @@ public class TopicController extends BaseController {
             hits += 1;
             mapCache.set(Constant.C_TOPIC_VIEWS + ":" + tid, hits);
             if (hits >= 10) {
-                typeCountService.update(Types.views.toString(), tid, 10);
+//                typeCountService.update(Types.views.toString(), tid, 10);
                 mapCache.set(Constant.C_TOPIC_VIEWS + ":" + tid, 0);
             }
         } catch (Exception e) {
-            LOGGER.error("", e);
+            log.error("", e);
         }
         return this.getView("topic_detail");
     }
@@ -305,16 +301,16 @@ public class TopicController extends BaseController {
         request.attribute("topic", topicMap);
 
         // 是否收藏
-        boolean is_favorite = favoriteService.isFavorite(Types.topic.toString(), uid, topic.getTid());
+        boolean is_favorite = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Types.favorites.toString()).event_id(topic.getTid()).build());
         request.attribute("is_favorite", is_favorite);
 
         // 是否点赞
-        boolean is_love = favoriteService.isFavorite(Types.love.toString(), uid, topic.getTid());
+        boolean is_love = favoriteService.isFavorite(Favorite.builder().uid(uid).event_type("topic").favorite_type(Types.love.toString()).event_id(topic.getTid()).build());
         request.attribute("is_love", is_love);
 
         Take cp = new Take(Comment.class);
         cp.and("tid", topic.getTid()).asc("cid").page(page, 20);
-        Paginator<Map<String, Object>> commentPage = commentService.getPageListMap(cp);
+        Paginator<Map<String, Object>> commentPage = null;//commentService.getPageListMap(cp);
         request.attribute("commentPage", commentPage);
     }
 
@@ -324,7 +320,7 @@ public class TopicController extends BaseController {
     @Route(value = "/comment/add", method = HttpMethod.POST)
     @JSON
     public RestResponse comment(Request request, Response response,
-                                @QueryParam String content, @QueryParam Integer tid) {
+                                @QueryParam String content, @QueryParam String tid) {
 
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
@@ -332,7 +328,7 @@ public class TopicController extends BaseController {
         }
 
         Integer uid = user.getUid();
-        Topic topic = topicService.getTopic(tid);
+        Topic topic = topicService.getTopicById(tid);
         if (null == topic) {
             response.go("/");
             return null;
@@ -340,16 +336,16 @@ public class TopicController extends BaseController {
         try {
             String ua = request.userAgent();
             topicService.comment(uid, topic.getUid(), tid, content, ua);
-            Constant.SYS_INFO = settingsService.getSystemInfo();
+            Constant.SYS_INFO = optionsService.getSystemInfo();
             Constant.VIEW_CONTEXT.set("sys_info", Constant.SYS_INFO);
-            userlogService.save(user.getUid(), Actions.ADD_COMMENT, content);
+            userlogService.save(Userlog.builder().uid(user.getUid()).action(Actions.ADD_COMMENT).content(content).build());
             return RestResponse.ok();
         } catch (Exception e) {
             String msg = "评论帖子失败";
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }
@@ -369,12 +365,12 @@ public class TopicController extends BaseController {
             return RestResponse.fail("您无权限操作");
         }
 
-        Integer tid = request.queryInt("tid");
-        if (null == tid || tid == 0) {
+        String tid = request.query("tid");
+        if (StringKit.isBlank(tid)) {
             return RestResponse.fail();
         }
 
-        Topic topic = topicService.getTopic(tid);
+        Topic topic = topicService.getTopicById(tid);
         if (null == topic) {
             return RestResponse.fail("不存在该帖子");
         }
@@ -382,14 +378,14 @@ public class TopicController extends BaseController {
         try {
             Integer count = topic.getIs_essence() == 1 ? 0 : 1;
             topicService.essence(tid, count);
-            userlogService.save(user.getUid(), Actions.ESSENCE, tid + ":" + count);
+            userlogService.save( Userlog.builder().uid(user.getUid()).action(Actions.ESSENCE).content(tid + ":" + count).build());
             return RestResponse.ok(tid);
         } catch (Exception e) {
             String msg = "设置失败";
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }
@@ -406,18 +402,18 @@ public class TopicController extends BaseController {
             return RestResponse.fail(401);
         }
 
-        Integer tid = request.queryInt("tid");
-        if (null == tid || tid == 0) {
+        String tid = request.query("tid");
+        if (StringKit.isBlank(tid)) {
             return RestResponse.fail();
         }
 
         try {
-            boolean isFavorite = favoriteService.isFavorite(Types.sinks.toString(), user.getUid(), tid);
+            boolean isFavorite = favoriteService.isFavorite(Favorite.builder().uid(user.getUid()).event_type("topic").favorite_type(Types.sinks.toString()).event_id(tid).build());
             if (!isFavorite) {
-                favoriteService.update(Types.sinks.toString(), user.getUid(), tid);
-                topicCountService.update(Types.sinks.toString(), tid, 1);
+//                favoriteService.update(Types.sinks.toString(), user.getUid(), tid);
+//                topicCountService.update(Types.sinks.toString(), tid, 1);
                 topicService.updateWeight(tid);
-                userlogService.save(user.getUid(), Actions.SINK, tid + "");
+                userlogService.save(Userlog.builder().uid(user.getUid()).action(Actions.SINK).content(tid).build());
             }
             return RestResponse.ok(tid);
         } catch (Exception e) {
@@ -425,7 +421,7 @@ public class TopicController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }
@@ -436,15 +432,10 @@ public class TopicController extends BaseController {
      */
     @Route(value = "/topic/delete", method = HttpMethod.POST)
     @JSON
-    public RestResponse delete(Request request) {
+    public RestResponse delete(Request request, @QueryParam String tid) {
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {
             return RestResponse.fail(401);
-        }
-
-        Integer tid = request.queryInt("tid", 0);
-        if (tid == 0 || user.getRole_id() > 2) {
-            return RestResponse.fail("您没有权限删除该贴");
         }
         try {
             topicService.delete(tid);
@@ -454,7 +445,7 @@ public class TopicController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             return RestResponse.fail(msg);
         }

@@ -188,7 +188,7 @@ $(document).ready(function(){
  */
 function doSetting(formId) {
     jc.post({
-        url : BASE+'/settings',
+        url : BASE+'/options',
         data: $(formId).serialize(),
         success: function (result) {
             if(result && result.success){

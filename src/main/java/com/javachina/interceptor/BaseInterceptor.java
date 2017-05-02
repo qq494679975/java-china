@@ -6,15 +6,13 @@ import com.blade.mvc.http.Request;
 import com.blade.mvc.http.Response;
 import com.blade.mvc.interceptor.Interceptor;
 import com.javachina.constants.Constant;
+import com.javachina.dto.LoginUser;
 import com.javachina.kit.SessionKit;
-import com.javachina.model.LoginUser;
 import com.javachina.service.UserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class BaseInterceptor implements Interceptor {
-
-    private static final Logger LOGGE = LoggerFactory.getLogger(BaseInterceptor.class);
 
     @Inject
     private UserService userService;
@@ -22,8 +20,8 @@ public class BaseInterceptor implements Interceptor {
     @Override
     public boolean before(Request request, Response response) {
 
-        LOGGE.info("User Agent: {}", request.userAgent());
-        LOGGE.info("请求: {}, IP: {}", request.uri(), request.address());
+        log.info("User Agent: {}", request.userAgent());
+        log.info("请求: {}, IP: {}", request.uri(), request.address());
 
         LoginUser user = SessionKit.getLoginUser();
         if (null == user) {

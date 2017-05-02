@@ -7,17 +7,17 @@ import com.blade.kit.CollectionKit;
 import com.blade.kit.StringKit;
 import com.javachina.constants.Types;
 import com.javachina.model.Comment;
-import com.javachina.model.Settings;
+import com.javachina.model.Options;
 import com.javachina.model.Topic;
 import com.javachina.model.User;
-import com.javachina.service.SettingsService;
+import com.javachina.service.OptionsService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
-public class SettingsServiceImpl implements SettingsService {
+public class OptionsServiceImpl implements OptionsService {
 
     @Inject
     private ActiveRecord activeRecord;
@@ -30,9 +30,9 @@ public class SettingsServiceImpl implements SettingsService {
     @Override
     public Map<String, Object> getSystemInfo() {
         Map<String, Object> map = new HashMap<String, Object>();
-        List<Settings> settings = activeRecord.list(new Settings());
+        List<Options> settings = activeRecord.list(new Options());
         if (CollectionKit.isNotEmpty(settings)) {
-            for (Settings setting : settings) {
+            for (Options setting : settings) {
                 map.put(setting.getSkey(), setting.getSvalue());
             }
         }
@@ -40,7 +40,7 @@ public class SettingsServiceImpl implements SettingsService {
     }
 
     private void update(String skey, Object value) {
-        Settings temp = new Settings();
+        Options temp = new Options();
         temp.setSvalue(value.toString());
         temp.setSkey(skey);
 
@@ -51,10 +51,10 @@ public class SettingsServiceImpl implements SettingsService {
     public boolean updateCount(String skey, int count) {
         try {
             if (StringKit.isNotBlank(skey) && count != 0) {
-                Settings settings = activeRecord.byId(Settings.class, skey);
-                if (null != settings) {
-                    if (StringKit.isNumber(settings.getSvalue().trim())) {
-                        int cur_count = Integer.valueOf(settings.getSvalue().trim());
+                Options options = activeRecord.byId(Options.class, skey);
+                if (null != options) {
+                    if (StringKit.isNumber(options.getSvalue().trim())) {
+                        int cur_count = Integer.valueOf(options.getSvalue().trim());
                         int val = cur_count + count;
                         this.update(skey, val);
                         return true;

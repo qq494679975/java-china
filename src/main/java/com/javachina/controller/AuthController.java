@@ -16,44 +16,37 @@ import com.blade.patchca.Patchca;
 import com.javachina.constants.Actions;
 import com.javachina.constants.Constant;
 import com.javachina.constants.Types;
+import com.javachina.dto.LoginUser;
 import com.javachina.exception.TipException;
 import com.javachina.kit.SessionKit;
 import com.javachina.kit.Utils;
-import com.javachina.model.Activecode;
-import com.javachina.model.LoginUser;
+import com.javachina.model.Codes;
 import com.javachina.model.User;
+import com.javachina.model.Userlog;
 import com.javachina.service.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 注册，登录，找回密码，激活
  */
 @Controller
+@Slf4j
 public class AuthController extends BaseController {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
+    @Inject
+    private OptionsService optionsService;
 
     @Inject
-    private SettingsService settingsService;
-
-    @Inject
-    private ActivecodeService activecodeService;
+    private CodesService codesService;
 
     @Inject
     private UserService userService;
 
     @Inject
-    private UserinfoService userinfoService;
+    private UserInfoService userInfoService;
 
     @Inject
     private CommentService commentService;
-
-    @Inject
-    private NoticeService noticeService;
-
-    @Inject
-    private FavoriteService favoriteService;
 
     @Inject
     private TopicService topicService;
@@ -71,7 +64,7 @@ public class AuthController extends BaseController {
         try {
             patchca.render(request, response);
         } catch (Exception e) {
-            LOGGER.error("获取验证码失败", e);
+            log.error("获取验证码失败", e);
         }
     }
 
@@ -79,8 +72,8 @@ public class AuthController extends BaseController {
      * 登录页面
      */
     @Route(value = "/signin", method = HttpMethod.GET)
-    public String show_signin() {
-        return "signin";
+    public ModelAndView show_signin() {
+        return this.getView("signin");
     }
 
     /**
@@ -89,28 +82,27 @@ public class AuthController extends BaseController {
     @Route(value = "/signin", method = HttpMethod.POST)
     @JSON
     public RestResponse signin(Request request, Response response,
-                               @QueryParam String login_name,
-                               @QueryParam String pass_word,
+                               @QueryParam String username, @QueryParam String password,
                                @QueryParam String rememberme) {
 
         try {
-            User user = userService.signin(login_name, pass_word);
-            LoginUser loginUser = userService.getLoginUser(user, null);
+            LoginUser loginUser = userService.signin(username, password);
             SessionKit.setLoginUser(request.session(), loginUser);
+
             if (StringKit.isNotBlank(rememberme) && rememberme.equals("on")) {
                 SessionKit.setCookie(response, Constant.USER_IN_COOKIE, loginUser.getUid());
             }
-            userlogService.save(user.getUid(), Actions.SIGNIN, login_name);
+
+            userlogService.save(Userlog.builder().uid(loginUser.getUid()).action(Actions.SIGNIN).content(username).build());
             String val = SessionKit.getCookie(request, Constant.JC_REFERRER_COOKIE);
+            if (StringKit.isNotBlank(val)) {
+                response.redirect(val);
+                return null;
+            }
             return RestResponse.ok(val);
         } catch (Exception e) {
             String msg = "登录失败";
-            if (e instanceof TipException) {
-                msg = e.getMessage();
-            } else {
-                LOGGER.error(msg, e);
-            }
-            return RestResponse.fail(msg);
+            return fail(e, msg);
         }
 
     }
@@ -191,7 +183,7 @@ public class AuthController extends BaseController {
         Take queryParam = new Take(User.class);
         queryParam.eq("login_name", login_name);
         queryParam.in("status", 0, 1);
-        User user = userService.getUser(queryParam);
+        User user = userService.getUserByTake(queryParam);
         if (null != user) {
             request.attribute(this.ERROR, "该用户名已经被占用，请更换用户名");
             return this.getView("signup");
@@ -200,7 +192,7 @@ public class AuthController extends BaseController {
         queryParam = new Take(User.class);
         queryParam.eq("email", email);
         queryParam.in("status", 0, 1);
-        user = userService.getUser(queryParam);
+        user = userService.getUserByTake(queryParam);
         if (null != user) {
             request.attribute(this.ERROR, "该邮箱已经被注册，请直接登录");
             return this.getView("signup");
@@ -209,7 +201,7 @@ public class AuthController extends BaseController {
         try {
             User user_ = userService.signup(login_name, pass_word, email);
             if (null != user_) {
-                userlogService.save(user_.getUid(), Actions.SIGNUP, login_name + ":" + email);
+                userlogService.save(Userlog.builder().uid(user_.getUid()).action(Actions.SIGNUP).content(login_name + ":" + email).build());
                 request.attribute(this.INFO, "注册成功，已经向您的邮箱 " + email + " 发送了一封激活申请，请注意查收！");
             } else {
                 request.attribute(this.ERROR, "注册发生异常");
@@ -219,7 +211,7 @@ public class AuthController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             request.attribute(this.ERROR, msg);
         }
@@ -231,36 +223,37 @@ public class AuthController extends BaseController {
      */
     @Route(value = "/active/:code", method = HttpMethod.GET)
     public ModelAndView activeAccount(@PathParam("code") String code, Request request, Response response) {
-        Activecode activecode = activecodeService.getActivecode(code);
-        if (null == activecode) {
+        Codes codes = codesService.getActivecode(code);
+        if (null == codes) {
             request.attribute(this.ERROR, "无效的激活码");
             return this.getView("info");
         }
 
-        Integer expries = activecode.getExpires_time();
+        Integer expries = codes.getExpired();
         if (expries < DateKit.getCurrentUnixTime()) {
             request.attribute(this.ERROR, "该激活码已经过期，请重新发送");
             return this.getView("info");
         }
 
-        if (activecode.getIs_use() == 1) {
+        if (codes.getIs_use() == 1) {
             request.attribute(this.ERROR, "激活码已经被使用");
             return this.getView("info");
         }
 
         // 找回密码
-        if (activecode.getType().equals(Types.forgot.toString())) {
+        if (codes.getType().equals(Types.forgot.toString())) {
             request.attribute("code", code);
             return this.getView("reset_pwd");
         }
 
         try {
-            userService.updateStatus(activecode.getUid(), 1);
-            activecodeService.useCode(code);
+            User temp = User.builder().uid(codes.getUid()).status(1).build();
+            userService.update(temp);
+            codesService.useCode(code);
 
             request.attribute(this.INFO, "激活成功，您可以凭密码登陆");
-            settingsService.updateCount(Types.user_count.toString(), +1);
-            Constant.SYS_INFO = settingsService.getSystemInfo();
+            optionsService.updateCount(Types.user_count.toString(), +1);
+            Constant.SYS_INFO = optionsService.getSystemInfo();
             Constant.VIEW_CONTEXT.set("sys_info", Constant.SYS_INFO);
 
         } catch (Exception e) {
@@ -268,7 +261,7 @@ public class AuthController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             request.attribute(this.ERROR, msg);
         }
@@ -299,7 +292,7 @@ public class AuthController extends BaseController {
             return this.getView("forgot");
         }
 
-        User user = userService.getUser(new Take(User.class).eq("email", email));
+        User user = userService.getUserByTake(new Take(User.class).eq("email", email));
         if (null == user) {
             request.attribute(this.ERROR, "该邮箱没有注册账户,请检查您的邮箱是否正确");
             request.attribute("email", email);
@@ -311,7 +304,7 @@ public class AuthController extends BaseController {
             return this.getView("forgot");
         }
         try {
-            String code = activecodeService.save(user, "forgot");
+            String code = codesService.save(user, "forgot");
             if (StringKit.isNotBlank(code)) {
                 request.attribute(this.INFO, "修改密码链接已经发送到您的邮箱，请注意查收！");
             } else {
@@ -322,7 +315,7 @@ public class AuthController extends BaseController {
             if (e instanceof TipException) {
                 msg = e.getMessage();
             } else {
-                LOGGER.error(msg, e);
+                log.error(msg, e);
             }
             request.attribute(this.ERROR, msg);
         }

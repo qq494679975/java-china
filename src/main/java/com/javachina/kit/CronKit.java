@@ -2,6 +2,7 @@ package com.javachina.kit;
 
 import com.blade.Blade;
 import com.blade.kit.DateKit;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,9 +11,8 @@ import java.io.File;
 /**
  * 定时任务工具类
  */
+@Slf4j
 public class CronKit {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(CronKit.class);
 
     /**
      * 备份数据库
@@ -78,7 +78,7 @@ public class CronKit {
             System.out.println("send mail end.");
 
         } catch (Exception e) {
-            LOGGER.error("备份操作出现问题", e);
+            log.error("备份操作出现问题", e);
         }
 
     }

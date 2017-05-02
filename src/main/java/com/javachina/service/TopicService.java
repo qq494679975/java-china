@@ -16,7 +16,7 @@ public interface TopicService {
      * @param tid
      * @return
      */
-    Topic getTopic(Integer tid);
+    Topic getTopicById(String tid);
 
     Map<String, Object> getTopicMap(Topic topic, boolean isDetail);
 
@@ -34,7 +34,7 @@ public interface TopicService {
      * @param topic
      * @return
      */
-    Integer publish(Topic topic);
+    String publish(Topic topic);
 
     /**
      * 更新帖子
@@ -45,7 +45,7 @@ public interface TopicService {
      * @param content
      * @return
      */
-    Integer update(Integer tid, Integer nid, String title, String content);
+    String update(String tid, Integer nid, String title, String content);
 
     /**
      * 评论帖子
@@ -57,9 +57,9 @@ public interface TopicService {
      * @param ua
      * @return
      */
-    boolean comment(Integer uid, Integer to_uid, Integer tid, String content, String ua);
+    boolean comment(Integer uid, Integer to_uid, String tid, String content, String ua);
 
-    void delete(Integer tid);
+    void delete(String tid);
 
     void refreshWeight();
 
@@ -68,7 +68,7 @@ public interface TopicService {
      *
      * @param tid
      */
-    void updateWeight(Integer tid);
+    void updateWeight(String tid);
 
     /**
      * 刷新帖子权重
@@ -80,7 +80,7 @@ public interface TopicService {
      * @param sinks
      * @param create_time
      */
-    void updateWeight(Integer tid, Integer loves, Integer favorites, Integer comment, Integer sinks, Integer create_time);
+    void updateWeight(String tid, Integer loves, Integer favorites, Integer comment, Integer sinks, Integer create_time);
 
     /**
      * 获取用户发布的帖子数
@@ -112,7 +112,7 @@ public interface TopicService {
      * @param tid
      * @param count
      */
-    void essence(Integer tid, Integer count);
+    void essence(String tid, Integer count);
 
     /**
      * 获取首页帖

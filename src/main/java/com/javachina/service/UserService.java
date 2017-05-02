@@ -2,16 +2,17 @@ package com.javachina.service;
 
 import com.blade.jdbc.core.Take;
 import com.blade.jdbc.model.Paginator;
-import com.javachina.model.LoginUser;
+import com.javachina.dto.LoginUser;
+import com.javachina.model.Remind;
 import com.javachina.model.User;
 
 import java.util.Map;
 
 public interface UserService {
 
-    User getUser(Integer uid);
+    User getUserById(Integer uid);
 
-    User getUser(Take take);
+    User getUserByTake(Take take);
 
     User getUserByLoginName(String user_name);
 
@@ -19,22 +20,34 @@ public interface UserService {
 
     Paginator<User> getPageList(Take take);
 
-    User signup(String loginName, String passWord, String email) throws Exception;
+    User signup(String username, String passWord, String email) throws Exception;
 
-    User signin(String loginName, String passWord);
+    LoginUser signin(String username, String passWord);
 
     LoginUser getLoginUser(User user, Integer uid);
 
-    boolean hasUser(String login_name);
+    boolean hasUser(String username);
 
     boolean delete(Integer uid);
 
-    boolean updateStatus(Integer uid, Integer status);
-
     boolean update(User user);
 
-    boolean updatePwd(Integer uid, String new_pwd);
+    /**
+     * 查询用户未读提醒数
+     *
+     * @param uid
+     * @return
+     */
+    Integer getNoReads(Integer uid);
 
-    boolean updateRole(Integer uid, Integer role_id);
+    /**
+     * 分页查询用户提醒
+     *
+     * @param uid
+     * @param page
+     * @param limit
+     * @return
+     */
+    Paginator<Remind> getReminds(Integer uid, int page, int limit);
 
 }
