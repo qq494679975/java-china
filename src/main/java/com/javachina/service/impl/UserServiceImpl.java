@@ -210,13 +210,13 @@ public class UserServiceImpl implements UserService {
             user = this.getUserById(uid);
         }
         if (null != user) {
-            LoginUser loginUser = new LoginUser();
-            loginUser.setUid(user.getUid());
-            loginUser.setUser_name(user.getUsername());
-            loginUser.setPass_word(user.getPassword());
-            loginUser.setStatus(user.getStatus());
-            loginUser.setRole_id(user.getRole_id());
-            loginUser.setAvatar(user.getAvatar());
+            LoginUser loginUser =
+                    LoginUser.builder().uid(user.getUid())
+                            .username(user.getUsername())
+                            .password(user.getPassword())
+                            .status(user.getStatus())
+                            .role_id(user.getRole_id())
+                            .avatar(user.getAvatar()).build();
 
             Integer comments = 1;//commentService.getComments(user.getUid());
             loginUser.setComments(comments);
@@ -230,7 +230,7 @@ public class UserServiceImpl implements UserService {
             UserInfo userInfo = userInfoService.getUserInfoById(user.getUid());
             if (null != userInfo) {
                 loginUser.setJobs(userInfo.getJobs());
-                loginUser.setNick_name(userInfo.getNick_name());
+                loginUser.setNickname(userInfo.getNick_name());
             }
 
             loginUser.setMy_topics(0);

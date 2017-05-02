@@ -374,11 +374,10 @@ public class TopicServiceImpl implements TopicService {
         if (limit <= 0 || limit >= 50) {
             limit = 20;
         }
-        String sql = "select b.login_name, b.avatar, a.tid, a.title, a.create_time, a.update_time," +
-                " c.title as node_title, c.slug as node_slug, d.comments from t_topic a " +
+        String sql = "select b.username, b.avatar, a.tid, a.title, a.created, a.updated," +
+                " c.title as node_title, c.slug as node_slug, a.comments from t_topic a " +
                 "left join t_user b on a.uid = b.uid " +
                 "left join t_node c on a.nid = c.nid " +
-                "left join t_topiccount d on a.tid = d.tid " +
                 "where a.status=1 ";
         if (null != nid) {
             sql += "and a.nid = :p1 ";
@@ -405,10 +404,9 @@ public class TopicServiceImpl implements TopicService {
             limit = 10;
         }
 
-        String sql = "select b.login_name, b.avatar, a.tid, a.title from t_topic a " +
+        String sql = "select b.username, b.avatar, a.tid, a.title from t_topic a " +
                 "left join t_user b on a.uid = b.uid " +
-                "left join t_topiccount d on a.tid = d.tid " +
-                "where a.status=1 order by a.weight desc, d.comments desc";
+                "where a.status = 1 order by a.weight desc, a.comments desc";
 
         Sql2o sql2o = activeRecord.sql2o();
         Paginator<HomeTopic> topicPaginator = PageHelper.go(sql2o, HomeTopic.class, sql, new PageRow(page, limit));

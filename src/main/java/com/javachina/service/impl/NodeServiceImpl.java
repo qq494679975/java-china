@@ -26,7 +26,7 @@ public class NodeServiceImpl implements NodeService {
 
     public Node getNodeById(Integer nid) {
         Node node = activeRecord.byId(Node.class, nid);
-        if (null != node && node.getStatus() == 0) {
+        if (null != node && node.getStatus() == 1) {
             return node;
         }
         return null;
@@ -54,7 +54,7 @@ public class NodeServiceImpl implements NodeService {
 
         // 查找所有父节点
         Take take = new Take(Node.class);
-        take.eq("is_del", 0).eq("pid", 0).orderby("topics desc");
+        take.eq("status", 1).eq("pid", 0).orderby("topics desc");
 
         List<NodeTree> nodeTrees = new ArrayList<>();
 
@@ -68,7 +68,7 @@ public class NodeServiceImpl implements NodeService {
                 nodeTree.setSlug(parent.getSlug());
 
                 Take temp = new Take(Node.class);
-                temp.and("is_del", 0).and("pid", parent.getNid()).orderby("topics desc");
+                temp.and("status", 1).and("pid", parent.getNid()).orderby("topics desc");
 
                 List<Node> items = activeRecord.list(temp);
                 nodeTree.setItems(items);
@@ -238,7 +238,7 @@ public class NodeServiceImpl implements NodeService {
         }
 
         Take np = new Take(Node.class);
-        np.eq("is_del", 0).notEq("pid", 0).page(page, limit, "topics desc");
+        np.eq("status", 1).notEq("pid", 0).page(page, limit, "topics desc");
 
         Paginator<Node> nodePaginator = activeRecord.page(np);
         if (null != nodePaginator) {

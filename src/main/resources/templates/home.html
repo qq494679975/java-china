@@ -22,8 +22,9 @@
 									
 									#for(topic : topicPage.list)
 									<div class="media">
-										<a class="pull-left" href="${base_url('/member/') + topic.login_name}">
-											<img class="media-object avatar avatar-sm" src="${cdn_url}/${topic.avatar}" alt="${topic.login_name}">
+										<a class="pull-left" href="${base_url('/member/') + topic.username}">
+											<img class="media-object avatar avatar-sm" src="${cdn_url}/${topic.avatar}"
+												 alt="${topic.username}">
 										</a>
 										<div class="comment">
 											<div class="comment-author h6 no-margin">
@@ -38,8 +39,8 @@
 											</div>
 											<div class="comment-bt">
 												<span class="label label-default"><a href="${base_url('/go/') + topic.node_slug}">${topic.node_title}</a></span> &nbsp;•&nbsp;
-												<strong><a href="${base_url('/member/') + topic.login_name}">${topic.login_name}</a></strong>
-												 &nbsp;•&nbsp; <span>${timespan(topic.update_time)}</span>
+												<strong><a href="${base_url('/member/') + topic.username}">${topic.username}</a></strong>
+												&nbsp;•&nbsp; <span>${timespan(topic.updated)}</span>
 											</div>
 										</div>
 									</div>

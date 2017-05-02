@@ -20,12 +20,13 @@
 			<div class="row">
 				<div class="profile-sidebar">
 					<div class="profile-sidebar-item profile-avatar">
-						<a href="${base_url('/member/' + login_user.user_name)}">
-							<img src="${cdn_url}/${login_user.avatar}" alt="${login_user.user_name}" class="avatar avatar-lg img-circle"/>
+						<a href="${base_url('/member/' + login_user.username)}">
+							<img src="${cdn_url}/${login_user.avatar}" alt="${login_user.username}"
+								 class="avatar avatar-lg img-circle"/>
 						</a>
 					</div>
 					<div class="profile-sidebar-item profile-info">
-						<span class="h5 bold">${login_user.user_name}</span>
+						<span class="h5 bold">${login_user.username}</span>
 						<p>${login_user.jobs ?! ''}</p>
 						<div class="w150 center-block mt10">
 							<a class="btn btn-success btn-outline btn-block" href="${base_url('/topic/add')}">
@@ -97,7 +98,7 @@
            	<ul class="list-unstyled hot-topics">
            		#for(topic : hot_topics)
            		<li>
-					<a href="${base_url('/member/') + topic.login_name}">
+					<a href="${base_url('/member/') + topic.username}">
 						<img class="img-circle" src="${cdn_url}/${topic.avatar}" width="25" height="25" />
 					</a>
 					<a href="${base_url('/topic/') + topic.tid}">${topic.title}</a>

@@ -393,12 +393,12 @@ public class MemberController extends BaseController {
                 return RestResponse.fail("新密码输入不一致，请确认");
             }
 
-            if (!EncrypKit.md5(loginUser.getUser_name() + curpwd).equals(loginUser.getPass_word())) {
+            if (!EncrypKit.md5(loginUser.getUsername() + curpwd).equals(loginUser.getPassword())) {
                 return RestResponse.fail("旧密码输入错误");
             }
 
             try {
-                String new_pwd = EncrypKit.md5(loginUser.getUser_name() + newpwd);
+                String new_pwd = EncrypKit.md5(loginUser.getUsername() + newpwd);
                 userService.update(User.builder().uid(loginUser.getUid()).password(new_pwd).build());
 
 //                LoginUser loginUserTemp = userService.getLoginUser(null, loginUser.getUid());
@@ -442,7 +442,7 @@ public class MemberController extends BaseController {
                 return RestResponse.fail("请上传小于5M的图片");
             }
 
-            String saveName = "avatar/" + user.getUser_name() + "/" + StringKit.getRandomChar(10) + suffix;
+            String saveName = "avatar/" + user.getUsername() + "/" + StringKit.getRandomChar(10) + suffix;
             String filePath = upDir + saveName;
             File file = new File(filePath);
             try {
